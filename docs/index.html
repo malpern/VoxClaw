@@ -4,42 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VoxClaw — Give OpenClaw a voice</title>
-    <meta name="description" content="VoxClaw is a macOS menu bar app that gives your OpenClaw AI agent a high-quality voice. Run it on your MacBook and let your agent speak.">
+    <meta name="description" content="VoxClaw is a macOS menu bar app that gives your OpenClaw AI agent a high-quality voice. Your agent speaks from any machine, not just the one it's running on.">
     <style>
         :root {
-            --bg: #0d1117;
-            --bg-elevated: #161b22;
-            --border: #30363d;
             --text: #e6edf3;
             --text-muted: #8b949e;
             --accent: #58a6ff;
             --accent-hover: #79b8ff;
+            --card-bg: rgba(255,255,255,0.04);
+            --card-border: rgba(255,255,255,0.08);
+            --red: #e04040;
+            --red-dark: #b82e2e;
+            --red-light: #f06050;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html {
+            background: #1c1f26;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            max-width: 720px;
+            max-width: 680px;
             margin: 0 auto;
             padding: 48px 24px 64px;
             line-height: 1.6;
             color: var(--text);
-            background: var(--bg);
             min-height: 100vh;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% 0%, rgba(60, 65, 80, 0.6) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 30% 20%, rgba(200, 60, 50, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 50% at 70% 10%, rgba(100, 120, 160, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, #2a2d35 0%, #1c1f26 35%, #141619 100%);
+        }
+
+        /* Shared content block: left-aligned text, centered block */
+        .content-block {
+            text-align: left;
         }
 
         /* Hero */
         .hero {
             text-align: center;
-            margin-bottom: 3em;
+            margin-bottom: 3.5em;
         }
         .hero-icon {
-            margin-bottom: 1em;
+            margin-bottom: 1.25em;
         }
         .hero-icon img {
-            width: 180px;
-            height: 180px;
-            border-radius: 36px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            width: 360px;
+            height: 360px;
+            filter: drop-shadow(0 16px 48px rgba(0,0,0,0.5));
         }
         .hero h1 {
             font-size: 2.75em;
@@ -50,61 +63,53 @@
         .hero .tagline {
             font-size: 1.3em;
             color: var(--text-muted);
-            margin-bottom: 1.5em;
+            margin-bottom: 1.75em;
         }
         .hero .intro {
             font-size: 1.15em;
             line-height: 1.75;
-            max-width: 600px;
+            max-width: 580px;
             margin: 0 auto 2em;
+            text-align: left;
         }
         .hero .intro strong {
-            color: var(--accent);
+            color: var(--red-light);
+        }
+        .hero .cta-wrap {
+            text-align: center;
         }
 
-        /* Mac-style download button */
+        /* Red lobster gradient button — KeyPath style */
         .download-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            width: 100%;
-            max-width: 320px;
-            padding: 14px 28px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
+            padding: 12px 32px;
+            background: var(--red);
             color: #fff !important;
             font-weight: 500;
-            font-size: 1.05em;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.18);
-            box-shadow:
-                0 0.5px 0 0 rgba(255,255,255,0.1) inset,
-                0 1px 3px rgba(0,0,0,0.3),
-                0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.2s ease;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: all 150ms ease;
             text-decoration: none;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            letter-spacing: -0.01em;
+            cursor: pointer;
         }
         .download-btn:hover {
-            background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%);
+            background: var(--red-dark);
             color: #fff !important;
             transform: translateY(-1px);
-            box-shadow:
-                0 0.5px 0 0 rgba(255,255,255,0.15) inset,
-                0 2px 6px rgba(0,0,0,0.3),
-                0 8px 24px rgba(0,0,0,0.2);
-            border-color: rgba(255,255,255,0.25);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         }
         .download-btn:active {
             transform: translateY(0);
-            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
+            background: #a02828;
         }
         .download-btn svg {
             width: 18px;
             height: 18px;
-            opacity: 0.8;
         }
         .download-note {
             font-size: 0.85em;
@@ -119,7 +124,7 @@
         }
         .gif-section img {
             border-radius: 12px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--card-border);
             max-width: 100%;
             width: 498px;
             height: auto;
@@ -131,10 +136,11 @@
             font-style: italic;
         }
 
-        /* Sections */
+        /* Links */
         a { color: var(--accent); text-decoration: none; }
         a:hover { color: var(--accent-hover); }
 
+        /* Sections */
         .section {
             margin: 3em 0;
         }
@@ -158,10 +164,15 @@
         .audio-section {
             margin: 3em 0;
             padding: 1.5em;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
             border-radius: 12px;
             text-align: center;
+        }
+        .audio-section .devices-img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 1.25em;
         }
         .audio-section h2 {
             font-size: 1.25em;
@@ -177,24 +188,25 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 28px;
-            background: transparent;
-            color: var(--accent);
-            font-weight: 600;
-            font-size: 1em;
-            border-radius: 10px;
-            border: 1px solid var(--accent);
+            padding: 10px 24px;
+            background: var(--red);
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.95em;
+            border-radius: 8px;
+            border: none;
             cursor: pointer;
-            transition: background 0.15s, color 0.15s;
+            transition: all 150ms ease;
             font-family: inherit;
         }
         .play-btn:hover {
-            background: var(--accent);
-            color: var(--bg);
+            background: var(--red-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         }
         .play-btn svg {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             fill: currentColor;
         }
 
@@ -207,11 +219,12 @@
         }
         @media (max-width: 520px) {
             .how-grid { grid-template-columns: 1fr; }
+            .hero-icon img { width: 240px; height: 240px; }
         }
         .how-card {
             padding: 1.25em;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
             border-radius: 10px;
         }
         .how-card .card-icon {
@@ -237,7 +250,7 @@
         .footer {
             margin-top: 3.5em;
             padding-top: 1.5em;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--card-border);
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
@@ -260,16 +273,18 @@
         <p class="intro">
             Your <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agent is running on your Mac Mini, doing its thing &mdash; reading your files, managing your messages, handling tasks.
             But it's been <strong>silent</strong>.
-            VoxClaw changes that. Install it on your MacBook (or your Mac Mini) and your agent speaks to you out loud, with a natural, high-quality voice.
+            VoxClaw changes that. Install it on your MacBook (or your Mac Mini) and your agent speaks to you out loud, with a natural, high-quality voice &mdash; from any of your machines, not just the one it's running on.
         </p>
 
-        <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip" class="download-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            Download VoxClaw
-        </a>
-        <p class="download-note">
-            macOS 26+ &middot; Free &amp; open source &middot; Or <a href="https://github.com/malpern/VoxClaw#build--install">build from source</a>
-        </p>
+        <div class="cta-wrap">
+            <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip" class="download-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Download VoxClaw
+            </a>
+            <p class="download-note">
+                macOS 26+ &middot; Free &amp; open source &middot; Or <a href="https://github.com/malpern/VoxClaw#build--install">build from source</a>
+            </p>
+        </div>
     </div>
 
     <!-- King's Speech GIF -->
@@ -281,7 +296,7 @@
     </div>
 
     <!-- The idea -->
-    <div class="section">
+    <div class="section content-block">
         <h2>Give your agent a voice</h2>
         <p>
             OpenClaw is the open-source AI assistant that lives on your devices &mdash; your files, your shell, your messaging apps.
@@ -296,7 +311,7 @@
 
     <!-- Audio demo -->
     <div class="audio-section">
-        <img src="hero-devices.png" alt="Mac Mini connected to MacBook with VoxClaw" style="max-width: 100%; border-radius: 10px; margin-bottom: 1.25em;">
+        <img class="devices-img" src="hero-devices.png" alt="Mac Mini connected to MacBook with VoxClaw">
         <h2>Hear it for yourself</h2>
         <p class="subtitle">This is VoxClaw speaking with OpenAI's Onyx voice.</p>
         <button class="play-btn" id="playBtn" onclick="toggleAudio()">
@@ -307,7 +322,7 @@
     </div>
 
     <!-- How it works -->
-    <div class="section">
+    <div class="section content-block">
         <h2>How it works</h2>
         <div class="how-grid">
             <div class="how-card">
@@ -357,7 +372,6 @@
 
     <script>
         const audio = document.getElementById('demoAudio');
-        const btn = document.getElementById('playBtn');
         const icon = document.getElementById('playIcon');
         const label = document.getElementById('playLabel');
 
