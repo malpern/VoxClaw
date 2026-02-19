@@ -6,13 +6,15 @@ import os
 final class NetworkListener {
     private var listener: NWListener?
     private let port: UInt16
+    private let serviceName: String?
     private let appState: AppState
     private var onTextReceived: (@Sendable (String) async -> Void)?
 
     var isListening: Bool { listener != nil }
 
-    init(port: UInt16 = 4140, appState: AppState) {
+    init(port: UInt16 = 4140, serviceName: String? = "HiMilo", appState: AppState) {
         self.port = port
+        self.serviceName = serviceName
         self.appState = appState
     }
 
@@ -25,7 +27,9 @@ final class NetworkListener {
         listener = try NWListener(using: params, on: nwPort)
 
         // Advertise via Bonjour for LAN discovery
-        listener?.service = NWListener.Service(name: "HiMilo", type: "_milo._tcp")
+        if let serviceName {
+            listener?.service = NWListener.Service(name: serviceName, type: "_milo._tcp")
+        }
 
         listener?.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in

@@ -1,6 +1,7 @@
 @testable import HiMiloCore
 import Testing
 
+@Suite(.serialized)
 struct LogTests {
     @Test func isVerboseDefaultsFalse() {
         let original = Log.isVerbose

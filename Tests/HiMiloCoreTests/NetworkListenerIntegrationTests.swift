@@ -3,13 +3,14 @@ import Foundation
 import Testing
 
 @MainActor
+@Suite(.serialized)
 struct NetworkListenerIntegrationTests {
     /// Use a high port unlikely to conflict
     private static let testPort: UInt16 = 49_152
 
     @Test func statusEndpointReturnsOK() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort, appState: appState)
+        let listener = NetworkListener(port: Self.testPort, serviceName: nil, appState: appState)
         var receivedTexts: [String] = []
 
         try listener.start { text in
@@ -33,7 +34,7 @@ struct NetworkListenerIntegrationTests {
 
     @Test func readEndpointAcceptsJSON() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 1, appState: appState)
+        let listener = NetworkListener(port: Self.testPort + 1, serviceName: nil, appState: appState)
         var receivedTexts: [String] = []
 
         try listener.start { text in
@@ -64,7 +65,7 @@ struct NetworkListenerIntegrationTests {
 
     @Test func readEndpointAcceptsPlainText() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 2, appState: appState)
+        let listener = NetworkListener(port: Self.testPort + 2, serviceName: nil, appState: appState)
         var receivedTexts: [String] = []
 
         try listener.start { text in
@@ -91,7 +92,7 @@ struct NetworkListenerIntegrationTests {
 
     @Test func notFoundForUnknownRoute() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 3, appState: appState)
+        let listener = NetworkListener(port: Self.testPort + 3, serviceName: nil, appState: appState)
 
         try listener.start { _ in }
         defer { listener.stop() }
