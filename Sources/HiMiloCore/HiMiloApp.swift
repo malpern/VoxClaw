@@ -25,6 +25,7 @@ public struct HiMiloLauncher {
 struct HiMiloApp: App {
     @State private var appState = AppState()
     @State private var coordinator = AppCoordinator()
+    @State private var settings = SettingsManager()
 
     init() {
         Log.app.info("App init, creating MenuBarExtra")
@@ -34,16 +35,20 @@ struct HiMiloApp: App {
         MenuBarExtra("HiMilo", systemImage: "waveform") {
             MenuBarView(
                 appState: appState,
+                settings: settings,
                 onTogglePause: { coordinator.togglePause() },
                 onStop: { coordinator.stop() },
-                onStartListening: { coordinator.startListening(appState: appState) },
-                onStopListening: { coordinator.stopListening() },
-                onReadText: { text in await coordinator.readText(text, appState: appState) }
+                onReadText: { text in await coordinator.readText(text, appState: appState, settings: settings) }
             )
             .task {
-                await coordinator.handleCLILaunch(appState: appState)
+                await coordinator.handleCLILaunch(appState: appState, settings: settings)
             }
         }
+
+        Window("Settings", id: "settings") {
+            SettingsView(settings: settings)
+        }
+        .defaultSize(width: 400, height: 320)
     }
 }
 
@@ -53,12 +58,13 @@ final class AppCoordinator {
     private var networkListener: NetworkListener?
     private var activeSession: ReadingSession?
 
+    // Network listener — used by CLI --listen mode only
     func startListening(appState: AppState, port: UInt16? = nil) {
         let port = port ?? CLIContext.shared?.port ?? 4140
         let listener = NetworkListener(port: port, appState: appState)
         do {
             try listener.start { [weak self] text in
-                await self?.readText(text, appState: appState)
+                await self?.readTextCLI(text, appState: appState)
             }
             self.networkListener = listener
         } catch {
@@ -71,14 +77,32 @@ final class AppCoordinator {
         networkListener = nil
     }
 
-    func readText(_ text: String, appState: AppState) async {
+    /// Menu bar app path — uses settings to pick the right engine.
+    func readText(_ text: String, appState: AppState, settings: SettingsManager) async {
         activeSession?.stop()
 
-        let session = ReadingSession(appState: appState)
+        appState.audioOnly = settings.audioOnly
+        let engine = settings.createEngine()
+        let session = ReadingSession(appState: appState, engine: engine)
         activeSession = session
+        await session.start(text: text)
+    }
 
-        let voice = CLIContext.shared?.voice ?? "onyx"
-        await session.start(text: text, voice: voice)
+    /// CLI path — tries KeychainHelper (env var / system keychain) for OpenAI, falls back to Apple.
+    func readTextCLI(_ text: String, appState: AppState, voice: String = "onyx", audioOnly: Bool = false) async {
+        activeSession?.stop()
+
+        let engine: any SpeechEngine
+        if let apiKey = try? KeychainHelper.readAPIKey() {
+            engine = OpenAISpeechEngine(apiKey: apiKey, voice: voice)
+        } else {
+            engine = AppleSpeechEngine()
+        }
+
+        appState.audioOnly = audioOnly
+        let session = ReadingSession(appState: appState, engine: engine)
+        activeSession = session
+        await session.start(text: text)
     }
 
     func togglePause() {
@@ -90,7 +114,7 @@ final class AppCoordinator {
         activeSession = nil
     }
 
-    func handleCLILaunch(appState: AppState) async {
+    func handleCLILaunch(appState: AppState, settings: SettingsManager) async {
         guard let context = CLIContext.shared else { return }
 
         // Small delay to let the app finish initializing
@@ -99,8 +123,7 @@ final class AppCoordinator {
         if context.listen {
             startListening(appState: appState, port: context.port)
         } else if let text = context.text {
-            appState.audioOnly = context.audioOnly
-            await readText(text, appState: appState)
+            await readTextCLI(text, appState: appState, voice: context.voice, audioOnly: context.audioOnly)
         }
     }
 }

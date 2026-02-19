@@ -4,12 +4,12 @@ import SwiftUI
 
 struct MenuBarView: View {
     let appState: AppState
+    let settings: SettingsManager
     var onTogglePause: () -> Void = {}
     var onStop: () -> Void = {}
-    var onStartListening: () -> Void = {}
-    var onStopListening: () -> Void = {}
     var onReadText: (String) async -> Void = { _ in }
 
+    @Environment(\.openWindow) private var openWindow
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -39,28 +39,9 @@ struct MenuBarView: View {
 
             Divider()
 
-            Toggle(
-                appState.isListening ? "HTTP Listener (port \(listenPort))" : "HTTP Listener",
-                isOn: Binding(
-                    get: { appState.isListening },
-                    set: { newValue in
-                        if newValue {
-                            onStartListening()
-                        } else {
-                            onStopListening()
-                        }
-                    }
-                )
-            )
-
-            if appState.isListening, let ip = NetworkListener.localIPAddress() {
-                Text("\(ip):\(listenPort)")
-                    .font(.caption)
-            }
-
             Toggle("Audio Only Mode", isOn: Binding(
-                get: { appState.audioOnly },
-                set: { appState.audioOnly = $0 }
+                get: { settings.audioOnly },
+                set: { settings.audioOnly = $0 }
             ))
 
             Toggle("Launch at Login", isOn: $launchAtLogin)
@@ -79,15 +60,26 @@ struct MenuBarView: View {
 
             Divider()
 
+            Button("Settings...") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "settings")
+            }
+            .keyboardShortcut(",", modifiers: .command)
+
+            Menu("HiMilo Companion CLI") {
+                Text("For terminal workflows, piping,")
+                Text("and network listener mode.")
+                Divider()
+                Link("Learn More...", destination: URL(string: "https://github.com/malpern/HiMilo")!)
+            }
+
+            Divider()
+
             Button("Quit") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: .command)
         }
-    }
-
-    private var listenPort: UInt16 {
-        CLIContext.shared?.port ?? 4140
     }
 
     @MainActor

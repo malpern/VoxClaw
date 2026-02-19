@@ -46,8 +46,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>${MACOS_MIN_VERSION}</string>
     <key>LSUIElement</key><true/>
     <key>CFBundleIconFile</key><string>AppIcon</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>HiMilo needs audio access for text-to-speech playback.</string>
     <key>BuildTimestamp</key><string>${BUILD_TIMESTAMP}</string>
     <key>GitCommit</key><string>${GIT_COMMIT}</string>
 </dict>
@@ -110,7 +108,11 @@ find "$APP" -name '._*' -delete
 
 # Generate entitlements.
 ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
-APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements}"
+if [[ "${APP_STORE:-}" == "1" ]]; then
+  APP_ENTITLEMENTS="${ROOT}/${APP_NAME}-AppStore.entitlements"
+else
+  APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements}"
+fi
 mkdir -p "$ENTITLEMENTS_DIR"
 
 if [[ ! -f "$APP_ENTITLEMENTS" ]]; then

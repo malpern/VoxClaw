@@ -17,12 +17,6 @@ struct CLIParser: ParsableCommand {
           milo --status                     Check if listener is running
           milo --send "Hello from CLI"      Send text to a running listener
 
-        KEYBOARD CONTROLS (during playback):
-          Space       Pause / Resume
-          Escape      Stop
-          ←           Skip back 3s
-          →           Skip forward 3s
-
         NETWORK API (when --listen is active):
           POST /read  Send text (JSON {"text":"..."} or plain body)
           GET /status Health check

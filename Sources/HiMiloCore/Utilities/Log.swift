@@ -11,8 +11,8 @@ enum Log {
     static let session  = Logger(subsystem: subsystem, category: "session")
     static let network  = Logger(subsystem: subsystem, category: "network")
     static let panel    = Logger(subsystem: subsystem, category: "panel")
-    static let keyboard = Logger(subsystem: subsystem, category: "keyboard")
     static let keychain = Logger(subsystem: subsystem, category: "keychain")
+    static let settings = Logger(subsystem: subsystem, category: "settings")
 
     nonisolated(unsafe) static var isVerbose = false
 
