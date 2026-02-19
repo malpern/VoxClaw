@@ -1,3 +1,4 @@
+import AppKit
 import os
 import ServiceManagement
 import SwiftUI
@@ -11,6 +12,7 @@ struct MenuBarView: View {
 
     @Environment(\.openWindow) private var openWindow
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var clipboardPreview: String?
 
     var body: some View {
         Group {
@@ -28,13 +30,36 @@ struct MenuBarView: View {
                 Divider()
             }
 
-            Button("Paste & Read") {
-                Task { await pasteAndRead() }
+            if let preview = clipboardPreview {
+                Button {
+                    Task { await pasteAndRead() }
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Read Clipboard")
+                            Text(preview)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    } icon: {
+                        Image(systemName: "doc.on.clipboard")
+                    }
+                }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+            } else {
+                Label {
+                    Text("Read Clipboard")
+                } icon: {
+                    Image(systemName: "doc.on.clipboard")
+                }
+                .foregroundStyle(.tertiary)
             }
-            .keyboardShortcut("v", modifiers: [.command, .shift])
 
-            Button("Read from File...") {
+            Button {
                 Task { await readFromFile() }
+            } label: {
+                Label("Read from File...", systemImage: "doc")
             }
 
             Divider()
@@ -80,6 +105,23 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q", modifiers: .command)
         }
+        .onAppear {
+            refreshClipboardPreview()
+        }
+    }
+
+    private func refreshClipboardPreview() {
+        guard let text = NSPasteboard.general.string(forType: .string),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            clipboardPreview = nil
+            return
+        }
+        let firstLine = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+            .first ?? ""
+        let truncated = firstLine.count > 60 ? String(firstLine.prefix(60)) + "..." : firstLine
+        clipboardPreview = "\"\(truncated)\""
     }
 
     @MainActor

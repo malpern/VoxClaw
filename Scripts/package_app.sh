@@ -46,6 +46,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>${MACOS_MIN_VERSION}</string>
     <key>LSUIElement</key><true/>
     <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array><string>MacOSX</string></array>
+    <key>NSHumanReadableCopyright</key><string>Copyright 2026 Michael Alpern. All rights reserved.</string>
     <key>BuildTimestamp</key><string>${BUILD_TIMESTAMP}</string>
     <key>GitCommit</key><string>${GIT_COMMIT}</string>
     <key>CFBundleURLTypes</key>
@@ -116,7 +120,7 @@ install_binary() {
 install_binary "$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 
 # Copy app icon.
-ICON_SOURCE="$ROOT/Sources/HiMilo/Resources/AppIcon.icns"
+ICON_SOURCE="$ROOT/Sources/HiMiloCore/Resources/AppIcon.icns"
 if [[ -f "$ICON_SOURCE" ]]; then
   cp "$ICON_SOURCE" "$APP/Contents/Resources/AppIcon.icns"
 fi
@@ -130,6 +134,11 @@ if [[ ${#SWIFTPM_BUNDLES[@]} -gt 0 ]]; then
   for bundle in "${SWIFTPM_BUNDLES[@]}"; do
     cp -R "$bundle" "$APP/Contents/Resources/"
   done
+fi
+
+# Embed provisioning profile (required for App Store).
+if [[ -n "${PROVISIONING_PROFILE:-}" && -f "$PROVISIONING_PROFILE" ]]; then
+  cp "$PROVISIONING_PROFILE" "$APP/Contents/embedded.provisionprofile"
 fi
 
 # Clean extended attributes.
