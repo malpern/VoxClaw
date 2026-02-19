@@ -29,7 +29,7 @@ struct SettingsManagerTests {
         defer { UserDefaults.standard.removeObject(forKey: "voiceEngine") }
 
         let settings = SettingsManager()
-        // No API key set, should fall back to Apple
+        settings.openAIAPIKey = ""  // ensure no key regardless of keychain state
         let engine = settings.createEngine()
         #expect(engine is AppleSpeechEngine)
     }

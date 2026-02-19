@@ -1,0 +1,58 @@
+# Build and attach VoxClaw.app to GitHub Releases when a version tag is pushed.
+# Usage: git tag v1.0.0 && git push origin v1.0.0
+#
+# For Developer ID signing (no Gatekeeper warning), add these repo secrets:
+#   MACOS_CERTIFICATE_P12_BASE64  - base64 of your .p12 (base64 -i cert.p12 | pbcopy)
+#   MACOS_CERTIFICATE_PASSWORD   - password for the .p12
+#   APP_IDENTITY                 - e.g. "Developer ID Application: Your Name (TEAM_ID)"
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Import signing certificate
+        if: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' }}
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Patch Package.swift for CI
+        run: |
+          # CI runner may not have macOS 26 SDK; patch to v15 for build.
+          sed -i '' 's/swift-tools-version: 6.2/swift-tools-version: 6.1/' Package.swift
+          sed -i '' 's/.macOS(.v26)/.macOS(.v15)/' Package.swift
+
+      - name: Build & Package
+        env:
+          APP_IDENTITY: ${{ secrets.APP_IDENTITY }}
+        run: |
+          swift build -c release
+          ./Scripts/package_app.sh release
+
+      - name: Zip app
+        run: ditto -c -k --sequesterRsrc --keepParent VoxClaw.app VoxClaw.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: VoxClaw.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

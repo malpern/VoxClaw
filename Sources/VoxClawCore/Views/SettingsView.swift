@@ -15,10 +15,11 @@ struct SettingsView: View {
             }
 
             playbackSection
+            networkSection
             generalSection
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: settings.voiceEngine == .openai ? 520 : 440)
+        .frame(width: 460, height: settings.voiceEngine == .openai ? 580 : 500)
     }
 
     // MARK: - Voice Engine Picker
@@ -146,6 +147,38 @@ struct SettingsView: View {
     private var playbackSection: some View {
         Section("Playback") {
             Toggle("Audio Only (no teleprompter overlay)", isOn: $settings.audioOnly)
+        }
+    }
+
+    // MARK: - Network
+
+    @ViewBuilder
+    private var networkSection: some View {
+        Section {
+            Toggle("Listen for network requests", isOn: $settings.networkListenerEnabled)
+
+            if settings.networkListenerEnabled {
+                HStack {
+                    Text("Port")
+                    Spacer()
+                    TextField("4140", value: $settings.networkListenerPort, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 70)
+                }
+
+                if let ip = NetworkListener.localIPAddress() {
+                    Text("curl -X POST http://\(ip):\(settings.networkListenerPort)/read -d 'Hello'")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+        } header: {
+            Text("Network")
+        } footer: {
+            Text("Accepts POST /read and GET /status. Useful for scripting and sending text from other machines.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

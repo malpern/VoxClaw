@@ -20,9 +20,9 @@ final class SettingsManager {
     var openAIAPIKey: String {
         didSet {
             if openAIAPIKey.isEmpty {
-                try? SandboxedKeychainHelper.deleteAPIKey()
+                try? KeychainHelper.deleteAPIKey()
             } else {
-                try? SandboxedKeychainHelper.saveAPIKey(openAIAPIKey)
+                try? KeychainHelper.saveAPIKey(openAIAPIKey)
             }
         }
     }
@@ -37,6 +37,18 @@ final class SettingsManager {
 
     var audioOnly: Bool {
         didSet { UserDefaults.standard.set(audioOnly, forKey: "audioOnly") }
+    }
+
+    var networkListenerEnabled: Bool {
+        didSet { UserDefaults.standard.set(networkListenerEnabled, forKey: "networkListenerEnabled") }
+    }
+
+    var networkListenerPort: UInt16 {
+        didSet { UserDefaults.standard.set(Int(networkListenerPort), forKey: "networkListenerPort") }
+    }
+
+    var hasCompletedOnboarding: Bool {
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
     }
 
     var launchAtLogin: Bool {
@@ -60,10 +72,14 @@ final class SettingsManager {
 
     init() {
         self.voiceEngine = VoiceEngineType(rawValue: UserDefaults.standard.string(forKey: "voiceEngine") ?? "apple") ?? .apple
-        self.openAIAPIKey = (try? SandboxedKeychainHelper.readAPIKey()) ?? ""
+        self.openAIAPIKey = (try? KeychainHelper.readAPIKey()) ?? ""
         self.openAIVoice = UserDefaults.standard.string(forKey: "openAIVoice") ?? "onyx"
         self.appleVoiceIdentifier = UserDefaults.standard.string(forKey: "appleVoiceIdentifier")
         self.audioOnly = UserDefaults.standard.bool(forKey: "audioOnly")
+        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        self.networkListenerEnabled = UserDefaults.standard.bool(forKey: "networkListenerEnabled")
+        let storedPort = UserDefaults.standard.integer(forKey: "networkListenerPort")
+        self.networkListenerPort = storedPort > 0 ? UInt16(storedPort) : 4140
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 

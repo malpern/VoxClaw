@@ -20,6 +20,7 @@ let package = Package(
             exclude: ["Resources"],
             resources: [
                 .copy("Audio/Samples/onyx-sample.mp3"),
+                .copy("Audio/Samples/onboarding-openai.mp3"),
             ]
         ),
         .executableTarget(

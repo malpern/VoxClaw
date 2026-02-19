@@ -59,12 +59,30 @@ struct VoxClawApp: App {
                 setupServicesProvider()
                 await coordinator.handleCLILaunch(appState: appState, settings: settings)
             }
+            .onChange(of: settings.networkListenerEnabled) { _, enabled in
+                if enabled {
+                    coordinator.startListening(appState: appState, settings: settings, port: settings.networkListenerPort)
+                } else {
+                    coordinator.stopListening()
+                }
+            }
+            .onChange(of: settings.networkListenerPort) { _, port in
+                guard settings.networkListenerEnabled else { return }
+                coordinator.stopListening()
+                coordinator.startListening(appState: appState, settings: settings, port: port)
+            }
         }
 
         Window("Settings", id: "settings") {
             SettingsView(settings: settings)
         }
         .defaultSize(width: 440, height: 420)
+
+        Window("Welcome to VoxClaw", id: "onboarding") {
+            OnboardingView(settings: settings)
+        }
+        .defaultSize(width: 500, height: 440)
+        .windowResizability(.contentSize)
     }
 
     // MARK: - URL Scheme (voxclaw://read?text=...)
@@ -105,13 +123,12 @@ final class AppCoordinator {
     private var networkListener: NetworkListener?
     private var activeSession: ReadingSession?
 
-    // Network listener — used by CLI --listen mode only
-    func startListening(appState: AppState, port: UInt16? = nil) {
+    func startListening(appState: AppState, settings: SettingsManager, port: UInt16? = nil) {
         let port = port ?? CLIContext.shared?.port ?? 4140
         let listener = NetworkListener(port: port, appState: appState)
         do {
             try listener.start { [weak self] text in
-                await self?.readTextCLI(text, appState: appState)
+                await self?.readText(text, appState: appState, settings: settings)
             }
             self.networkListener = listener
         } catch {
@@ -124,29 +141,16 @@ final class AppCoordinator {
         networkListener = nil
     }
 
-    /// Menu bar app path — uses settings to pick the right engine.
-    func readText(_ text: String, appState: AppState, settings: SettingsManager) async {
+    func readText(
+        _ text: String,
+        appState: AppState,
+        settings: SettingsManager,
+        audioOnlyOverride: Bool? = nil,
+        engineOverride: (any SpeechEngine)? = nil
+    ) async {
         activeSession?.stop()
-
-        appState.audioOnly = settings.audioOnly
-        let engine = settings.createEngine()
-        let session = ReadingSession(appState: appState, engine: engine)
-        activeSession = session
-        await session.start(text: text)
-    }
-
-    /// CLI path — tries KeychainHelper (env var / system keychain) for OpenAI, falls back to Apple.
-    func readTextCLI(_ text: String, appState: AppState, voice: String = "onyx", audioOnly: Bool = false) async {
-        activeSession?.stop()
-
-        let engine: any SpeechEngine
-        if let apiKey = try? KeychainHelper.readAPIKey() {
-            engine = OpenAISpeechEngine(apiKey: apiKey, voice: voice)
-        } else {
-            engine = AppleSpeechEngine()
-        }
-
-        appState.audioOnly = audioOnly
+        appState.audioOnly = audioOnlyOverride ?? settings.audioOnly
+        let engine = engineOverride ?? settings.createEngine()
         let session = ReadingSession(appState: appState, engine: engine)
         activeSession = session
         await session.start(text: text)
@@ -168,9 +172,16 @@ final class AppCoordinator {
         try? await Task.sleep(for: .milliseconds(100))
 
         if context.listen {
-            startListening(appState: appState, port: context.port)
+            startListening(appState: appState, settings: settings, port: context.port)
         } else if let text = context.text {
-            await readTextCLI(text, appState: appState, voice: context.voice, audioOnly: context.audioOnly)
+            let engine: any SpeechEngine
+            if let apiKey = try? KeychainHelper.readAPIKey() {
+                engine = OpenAISpeechEngine(apiKey: apiKey, voice: context.voice, speed: context.rate)
+            } else {
+                engine = AppleSpeechEngine(rate: context.rate)
+            }
+            await readText(text, appState: appState, settings: settings,
+                           audioOnlyOverride: context.audioOnly, engineOverride: engine)
         }
     }
 }

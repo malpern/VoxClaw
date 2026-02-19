@@ -3,51 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoxClaw</title>
+    <title>VoxClaw — Give OpenClaw a voice</title>
+    <meta name="description" content="VoxClaw is a macOS menu bar app that gives your OpenClaw AI agent a high-quality voice. Run it on your MacBook and let your agent speak.">
     <style>
+        :root {
+            --bg: #0d1117;
+            --bg-elevated: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79b8ff;
+            --green: #2ea043;
+            --green-hover: #3fb950;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             max-width: 720px;
-            margin: 40px auto;
-            padding: 0 20px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
             line-height: 1.6;
-            color: #1d1d1f;
-            background: #fff;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            margin-bottom: 3em;
+        }
+        .hero h1 {
+            font-size: 2.75em;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.15em;
+        }
+        .hero .tagline {
+            font-size: 1.3em;
+            color: var(--text-muted);
+            margin-bottom: 1.5em;
+        }
+        .hero .intro {
+            font-size: 1.15em;
+            line-height: 1.75;
+            max-width: 600px;
+            margin: 0 auto 2em;
+        }
+        .hero .intro strong {
+            color: var(--accent);
+        }
+
+        /* Download CTA */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 32px;
+            background: linear-gradient(180deg, #238636 0%, var(--green) 100%);
+            color: #fff !important;
+            font-weight: 600;
+            font-size: 1.15em;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            text-decoration: none;
+        }
+        .download-btn:hover {
+            background: linear-gradient(180deg, var(--green) 0%, var(--green-hover) 100%);
+            color: #fff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 160, 67, 0.35);
+        }
+        .download-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+        .download-note {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-top: 0.75em;
+        }
+
+        /* GIF section */
+        .gif-section {
+            margin: 3em 0;
             text-align: center;
         }
-        h1 { font-size: 2em; margin-bottom: 0.2em; }
-        .hero { margin: 2em 0; }
-        .hero img {
+        .gif-section img {
+            border-radius: 12px;
+            border: 1px solid var(--border);
             max-width: 100%;
-            width: 640px;
+            width: 498px;
             height: auto;
-            border-radius: 20px;
         }
-        .tagline { color: #86868b; font-size: 1.1em; margin-bottom: 1em; }
-        .lead { font-size: 1.15em; margin-bottom: 1.5em; line-height: 1.7; }
-        a { color: #0066cc; }
-        .links { margin-top: 2em; }
-        .links a { display: inline-block; margin: 0 12px; }
+        .gif-caption {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-top: 0.5em;
+            font-style: italic;
+        }
+
+        /* Sections */
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        .section {
+            margin: 3em 0;
+        }
+        .section h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 0.75em;
+            letter-spacing: -0.01em;
+        }
+        .section p {
+            font-size: 1.05em;
+            line-height: 1.75;
+            color: var(--text);
+            margin-bottom: 1em;
+        }
+        .section p.muted {
+            color: var(--text-muted);
+        }
+
+        /* Audio player */
+        .audio-section {
+            margin: 3em 0;
+            padding: 1.5em;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .audio-section h2 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin-bottom: 0.25em;
+        }
+        .audio-section .subtitle {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            margin-bottom: 1.25em;
+        }
+        .play-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 28px;
+            background: transparent;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 1em;
+            border-radius: 10px;
+            border: 1px solid var(--accent);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            font-family: inherit;
+        }
+        .play-btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        .play-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* How it works */
+        .how-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1em;
+            margin-top: 1.25em;
+        }
+        @media (max-width: 520px) {
+            .how-grid { grid-template-columns: 1fr; }
+        }
+        .how-card {
+            padding: 1.25em;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .how-card .icon {
+            font-size: 1.5em;
+            margin-bottom: 0.4em;
+        }
+        .how-card h3 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+        }
+        .how-card p {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 3.5em;
+            padding-top: 1.5em;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .footer a {
+            font-size: 0.95em;
+        }
     </style>
 </head>
 <body>
-    <h1>VoxClaw</h1>
-    <p class="tagline">Give OpenClaw a voice</p>
 
+    <!-- Hero -->
     <div class="hero">
-        <img src="voxclaw-hero.png" alt="VoxClaw app icon — a crab claw holding a speaker, symbolizing voice for the OpenClaw agent" width="640">
+        <h1>VoxClaw</h1>
+        <p class="tagline">Your agent has a voice.</p>
+
+        <p class="intro">
+            Your <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agent is running on your Mac Mini, doing its thing &mdash; reading your files, managing your messages, handling tasks.
+            But it's been <strong>silent</strong>.
+            VoxClaw changes that. Install it on your MacBook and your agent speaks to you out loud, with a natural, high-quality voice.
+        </p>
+
+        <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip" class="download-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download VoxClaw
+        </a>
+        <p class="download-note">
+            macOS 26+ &middot; Free &amp; open source &middot; Or <a href="https://github.com/malpern/VoxClaw#build--install">build from source</a>
+        </p>
     </div>
 
-    <p class="lead">
-        <a href="https://github.com/openclaw/openclaw">OpenClaw</a> is the open-source personal AI assistant that runs on your devices — your files, your shell, your messaging apps (WhatsApp, Telegram, Slack, Discord, and more). It lives where you work. <strong>VoxClaw gives it a voice.</strong>
-    </p>
-    <p class="lead">
-        Run VoxClaw on your Mac and hear OpenClaw speak to you. When OpenClaw runs on another computer — a server, a headless box, or a different machine — send text to your Mac over the network and VoxClaw speaks it aloud with high-quality text-to-speech. Apple's built-in voices work out of the box; add your own OpenAI API key for neural voices when you want that extra polish. Paste text, pipe from the CLI, or stream from any device on your LAN — and listen.
-    </p>
+    <!-- King's Speech GIF -->
+    <div class="gif-section">
+        <img src="https://media1.tenor.com/m/kD9RhBkq9D0AAAAC/kings-speech-voice.gif"
+             alt="Colin Firth in The King's Speech — 'Because I have a voice!'"
+             loading="lazy">
+        <p class="gif-caption">"Because I have a voice!" &mdash; The King's Speech</p>
+    </div>
 
-    <div class="links">
+    <!-- The idea -->
+    <div class="section">
+        <h2>Give your agent a voice</h2>
+        <p>
+            OpenClaw is the open-source AI assistant that lives on your devices &mdash; your files, your shell, your messaging apps.
+            It runs wherever you need it: on a Mac Mini tucked under your desk, a headless server, or the same machine you're sitting at.
+        </p>
+        <p>
+            VoxClaw sits in your MacBook's menu bar, waiting. When your agent has something to say, it speaks &mdash;
+            with OpenAI's neural voices that sound like a real person, or with your Mac's built-in text-to-speech if you prefer no setup.
+            And soon, it'll work on your iPhone too.
+        </p>
+    </div>
+
+    <!-- Audio demo -->
+    <div class="audio-section">
+        <h2>Hear it for yourself</h2>
+        <p class="subtitle">This is VoxClaw speaking with OpenAI's Onyx voice.</p>
+        <button class="play-btn" id="playBtn" onclick="toggleAudio()">
+            <svg id="playIcon" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+            <span id="playLabel">Play Demo</span>
+        </button>
+        <audio id="demoAudio" src="voxclaw-voice-demo.mp3" preload="none"></audio>
+    </div>
+
+    <!-- How it works -->
+    <div class="section">
+        <h2>How it works</h2>
+        <div class="how-grid">
+            <div class="how-card">
+                <div class="icon">&#127897;</div>
+                <h3>Menu bar app</h3>
+                <p>VoxClaw lives in your menu bar, always ready. No windows to manage.</p>
+            </div>
+            <div class="how-card">
+                <div class="icon">&#127760;</div>
+                <h3>Cross-machine</h3>
+                <p>Agent on your Mac Mini? VoxClaw listens over the network and speaks on your MacBook.</p>
+            </div>
+            <div class="how-card">
+                <div class="icon">&#127908;</div>
+                <h3>OpenAI voices</h3>
+                <p>Bring your own API key for natural, expressive neural voices. Or use Apple's built-in TTS free.</p>
+            </div>
+            <div class="how-card">
+                <div class="icon">&#9000;</div>
+                <h3>CLI &amp; URL scheme</h3>
+                <p>Pipe text, use the CLI, curl it, or trigger via <code>voxclaw://</code> URL scheme.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Get started -->
+    <div class="section" style="text-align: center;">
+        <h2>Get started in 30 seconds</h2>
+        <p class="muted" style="max-width: 500px; margin: 0 auto 1.5em;">
+            Download VoxClaw, drag it to Applications, and launch it. A step-by-step setup wizard walks you through choosing a voice, connecting your agent, and configuring launch at login.
+        </p>
+        <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip" class="download-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download VoxClaw
+        </a>
+        <p class="download-note">
+            macOS 26+ &middot; <a href="https://github.com/malpern/VoxClaw">View on GitHub</a>
+        </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
         <a href="https://github.com/malpern/VoxClaw">GitHub</a>
+        <a href="https://github.com/openclaw/openclaw">OpenClaw</a>
         <a href="privacy.html">Privacy Policy</a>
     </div>
+
+    <script>
+        const audio = document.getElementById('demoAudio');
+        const btn = document.getElementById('playBtn');
+        const icon = document.getElementById('playIcon');
+        const label = document.getElementById('playLabel');
+
+        const playSVG = '<polygon points="5,3 19,12 5,21"/>';
+        const stopSVG = '<rect x="5" y="4" width="14" height="16" rx="2"/>';
+
+        function toggleAudio() {
+            if (audio.paused) {
+                audio.play();
+                icon.innerHTML = stopSVG;
+                label.textContent = 'Stop';
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+                icon.innerHTML = playSVG;
+                label.textContent = 'Play Demo';
+            }
+        }
+
+        audio.addEventListener('ended', function() {
+            icon.innerHTML = playSVG;
+            label.textContent = 'Play Demo';
+        });
+    </script>
+
 </body>
 </html>

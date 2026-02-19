@@ -136,11 +136,6 @@ if [[ ${#SWIFTPM_BUNDLES[@]} -gt 0 ]]; then
   done
 fi
 
-# Embed provisioning profile (required for App Store).
-if [[ -n "${PROVISIONING_PROFILE:-}" && -f "$PROVISIONING_PROFILE" ]]; then
-  cp "$PROVISIONING_PROFILE" "$APP/Contents/embedded.provisionprofile"
-fi
-
 # Clean extended attributes.
 chmod -R u+w "$APP"
 xattr -cr "$APP"
@@ -148,11 +143,7 @@ find "$APP" -name '._*' -delete
 
 # Generate entitlements.
 ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
-if [[ "${APP_STORE:-}" == "1" ]]; then
-  APP_ENTITLEMENTS="${ROOT}/${APP_NAME}-AppStore.entitlements"
-else
-  APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements}"
-fi
+APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements}"
 mkdir -p "$ENTITLEMENTS_DIR"
 
 if [[ ! -f "$APP_ENTITLEMENTS" ]]; then

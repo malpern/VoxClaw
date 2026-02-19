@@ -9,12 +9,14 @@ final class AppleSpeechEngine: NSObject, SpeechEngine {
     private let synthesizer = AVSpeechSynthesizer()
     private var words: [String] = []
     private let voiceIdentifier: String?
+    private let rate: Float
 
     /// Maps character offset ranges in the original text to word indices.
     private var charOffsetToWordIndex: [(range: Range<Int>, wordIndex: Int)] = []
 
-    init(voiceIdentifier: String? = nil) {
+    init(voiceIdentifier: String? = nil, rate: Float = 1.0) {
         self.voiceIdentifier = voiceIdentifier
+        self.rate = rate
         super.init()
         synthesizer.delegate = self
     }
@@ -33,7 +35,8 @@ final class AppleSpeechEngine: NSObject, SpeechEngine {
         } else {
             utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         }
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        let targetRate = AVSpeechUtteranceDefaultSpeechRate * rate
+        utterance.rate = min(max(targetRate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
 
         Log.tts.info("Apple speech starting with voice: \(utterance.voice?.name ?? "default", privacy: .public)")
 

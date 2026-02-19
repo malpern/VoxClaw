@@ -4,6 +4,12 @@
   <img src="docs/voxclaw-hero.png" alt="VoxClaw app icon — a crab claw holding a speaker" width="320">
 </p>
 
+<p align="center">
+  <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip">
+    <img src="https://img.shields.io/badge/Download-Mac%20App-238636?style=for-the-badge&logo=apple&logoColor=white" alt="Download Mac App">
+  </a>
+</p>
+
 **Give OpenClaw a voice.**
 
 [OpenClaw](https://github.com/openclaw/openclaw) is the open-source personal AI assistant that runs on your devices — your files, your shell, your messaging apps (WhatsApp, Telegram, Slack, Discord, and more). It lives where you work. **VoxClaw gives it a voice.**

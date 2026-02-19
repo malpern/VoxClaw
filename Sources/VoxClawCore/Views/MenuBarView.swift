@@ -10,10 +10,29 @@ struct MenuBarView: View {
     var onReadText: (String) async -> Void = { _ in }
 
     @Environment(\.openWindow) private var openWindow
-    @State private var clipboardPreview: String?
+
+    private var clipboardPreview: String? {
+        guard let text = NSPasteboard.general.string(forType: .string),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        let firstLine = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+            .first ?? ""
+        let truncated = firstLine.count > 60 ? String(firstLine.prefix(60)) + "..." : firstLine
+        return "\"\(truncated)\""
+    }
 
     var body: some View {
         Group {
+            EmptyView()
+                .task {
+                    guard !settings.hasCompletedOnboarding else { return }
+                    try? await Task.sleep(for: .milliseconds(500))
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "onboarding")
+                }
             if appState.isActive {
                 Button(appState.isPaused ? "Resume" : "Pause") {
                     onTogglePause()
@@ -62,26 +81,22 @@ struct MenuBarView: View {
 
             Divider()
 
-            if settings.voiceEngine == .apple {
-                Button {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openWindow(id: "settings")
-                } label: {
-                    Label("Better Voice...", systemImage: "sparkles")
-                }
-            }
-
             Button("Settings...") {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "settings")
             }
             .keyboardShortcut(",", modifiers: .command)
 
-            Menu("VoxClaw Companion CLI") {
-                Text("For terminal workflows, piping,")
-                Text("and network listener mode.")
-                Divider()
-                Link("Learn More...", destination: URL(string: "https://github.com/malpern/VoxClaw")!)
+            if appState.isListening {
+                if let ip = NetworkListener.localIPAddress() {
+                    Text("Listening on \(ip):\(settings.networkListenerPort)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Listening on port \(settings.networkListenerPort)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Divider()
@@ -91,23 +106,6 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q", modifiers: .command)
         }
-        .onAppear {
-            refreshClipboardPreview()
-        }
-    }
-
-    private func refreshClipboardPreview() {
-        guard let text = NSPasteboard.general.string(forType: .string),
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            clipboardPreview = nil
-            return
-        }
-        let firstLine = text
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: .newlines)
-            .first ?? ""
-        let truncated = firstLine.count > 60 ? String(firstLine.prefix(60)) + "..." : firstLine
-        clipboardPreview = "\"\(truncated)\""
     }
 
     @MainActor
