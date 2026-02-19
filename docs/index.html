@@ -14,8 +14,6 @@
             --text-muted: #8b949e;
             --accent: #58a6ff;
             --accent-hover: #79b8ff;
-            --green: #2ea043;
-            --green-hover: #3fb950;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -33,6 +31,15 @@
         .hero {
             text-align: center;
             margin-bottom: 3em;
+        }
+        .hero-icon {
+            margin-bottom: 1em;
+        }
+        .hero-icon img {
+            width: 180px;
+            height: 180px;
+            border-radius: 36px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
         .hero h1 {
             font-size: 2.75em;
@@ -55,31 +62,49 @@
             color: var(--accent);
         }
 
-        /* Download CTA */
+        /* Mac-style download button */
         .download-btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
-            padding: 16px 32px;
-            background: linear-gradient(180deg, #238636 0%, var(--green) 100%);
+            width: 100%;
+            max-width: 320px;
+            padding: 14px 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%);
             color: #fff !important;
-            font-weight: 600;
-            font-size: 1.15em;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-            transition: transform 0.15s, box-shadow 0.15s;
+            font-weight: 500;
+            font-size: 1.05em;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow:
+                0 0.5px 0 0 rgba(255,255,255,0.1) inset,
+                0 1px 3px rgba(0,0,0,0.3),
+                0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
             text-decoration: none;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            letter-spacing: -0.01em;
         }
         .download-btn:hover {
-            background: linear-gradient(180deg, var(--green) 0%, var(--green-hover) 100%);
+            background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%);
             color: #fff !important;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(46, 160, 67, 0.35);
+            transform: translateY(-1px);
+            box-shadow:
+                0 0.5px 0 0 rgba(255,255,255,0.15) inset,
+                0 2px 6px rgba(0,0,0,0.3),
+                0 8px 24px rgba(0,0,0,0.2);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .download-btn:active {
+            transform: translateY(0);
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
         }
         .download-btn svg {
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
+            opacity: 0.8;
         }
         .download-note {
             font-size: 0.85em;
@@ -189,9 +214,12 @@
             border: 1px solid var(--border);
             border-radius: 10px;
         }
-        .how-card .icon {
-            font-size: 1.5em;
-            margin-bottom: 0.4em;
+        .how-card .card-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            margin-bottom: 0.75em;
+            object-fit: cover;
         }
         .how-card h3 {
             font-size: 1em;
@@ -223,13 +251,16 @@
 
     <!-- Hero -->
     <div class="hero">
+        <div class="hero-icon">
+            <img src="voxclaw-hero.png" alt="VoxClaw app icon">
+        </div>
         <h1>VoxClaw</h1>
         <p class="tagline">Your agent has a voice.</p>
 
         <p class="intro">
             Your <a href="https://github.com/openclaw/openclaw">OpenClaw</a> agent is running on your Mac Mini, doing its thing &mdash; reading your files, managing your messages, handling tasks.
             But it's been <strong>silent</strong>.
-            VoxClaw changes that. Install it on your MacBook and your agent speaks to you out loud, with a natural, high-quality voice.
+            VoxClaw changes that. Install it on your MacBook (or your Mac Mini) and your agent speaks to you out loud, with a natural, high-quality voice.
         </p>
 
         <a href="https://github.com/malpern/VoxClaw/releases/latest/download/VoxClaw.zip" class="download-btn">
@@ -265,6 +296,7 @@
 
     <!-- Audio demo -->
     <div class="audio-section">
+        <img src="hero-devices.png" alt="Mac Mini connected to MacBook with VoxClaw" style="max-width: 100%; border-radius: 10px; margin-bottom: 1.25em;">
         <h2>Hear it for yourself</h2>
         <p class="subtitle">This is VoxClaw speaking with OpenAI's Onyx voice.</p>
         <button class="play-btn" id="playBtn" onclick="toggleAudio()">
@@ -279,22 +311,22 @@
         <h2>How it works</h2>
         <div class="how-grid">
             <div class="how-card">
-                <div class="icon">&#127897;</div>
+                <img class="card-icon" src="icon-menubar.png" alt="Menu bar icon">
                 <h3>Menu bar app</h3>
                 <p>VoxClaw lives in your menu bar, always ready. No windows to manage.</p>
             </div>
             <div class="how-card">
-                <div class="icon">&#127760;</div>
+                <img class="card-icon" src="icon-network.png" alt="Cross-machine icon">
                 <h3>Cross-machine</h3>
                 <p>Agent on your Mac Mini? VoxClaw listens over the network and speaks on your MacBook.</p>
             </div>
             <div class="how-card">
-                <div class="icon">&#127908;</div>
+                <img class="card-icon" src="icon-voice.png" alt="OpenAI voices icon">
                 <h3>OpenAI voices</h3>
                 <p>Bring your own API key for natural, expressive neural voices. Or use Apple's built-in TTS free.</p>
             </div>
             <div class="how-card">
-                <div class="icon">&#9000;</div>
+                <img class="card-icon" src="icon-cli.png" alt="CLI icon">
                 <h3>CLI &amp; URL scheme</h3>
                 <p>Pipe text, use the CLI, curl it, or trigger via <code>voxclaw://</code> URL scheme.</p>
             </div>
