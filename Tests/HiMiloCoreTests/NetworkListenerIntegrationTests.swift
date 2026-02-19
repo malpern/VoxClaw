@@ -5,8 +5,8 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct NetworkListenerIntegrationTests {
-    /// Use a high port unlikely to conflict
-    private static let testPort: UInt16 = 49_152
+    /// Use a high port unlikely to conflict; all tests share this port since the suite is serialized
+    private static let testPort: UInt16 = 58_273
 
     @Test func statusEndpointReturnsOK() async throws {
         let appState = AppState()
@@ -34,7 +34,7 @@ struct NetworkListenerIntegrationTests {
 
     @Test func readEndpointAcceptsJSON() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 1, serviceName: nil, appState: appState)
+        let listener = NetworkListener(port: Self.testPort, serviceName: nil, appState: appState)
         var receivedTexts: [String] = []
 
         try listener.start { text in
@@ -42,10 +42,10 @@ struct NetworkListenerIntegrationTests {
         }
         defer { listener.stop() }
 
-        try await waitForListener(port: Self.testPort + 1)
+        try await waitForListener(port: Self.testPort)
 
         // POST /read with JSON body
-        let url = URL(string: "http://localhost:\(Self.testPort + 1)/read")!
+        let url = URL(string: "http://localhost:\(Self.testPort)/read")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -65,7 +65,7 @@ struct NetworkListenerIntegrationTests {
 
     @Test func readEndpointAcceptsPlainText() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 2, serviceName: nil, appState: appState)
+        let listener = NetworkListener(port: Self.testPort, serviceName: nil, appState: appState)
         var receivedTexts: [String] = []
 
         try listener.start { text in
@@ -73,15 +73,15 @@ struct NetworkListenerIntegrationTests {
         }
         defer { listener.stop() }
 
-        try await waitForListener(port: Self.testPort + 2)
+        try await waitForListener(port: Self.testPort)
 
         // POST /read with plain text body
-        let url = URL(string: "http://localhost:\(Self.testPort + 2)/read")!
+        let url = URL(string: "http://localhost:\(Self.testPort)/read")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = "plain text body".data(using: .utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
         let http = try #require(response as? HTTPURLResponse)
 
         #expect(http.statusCode == 200)
@@ -92,15 +92,15 @@ struct NetworkListenerIntegrationTests {
 
     @Test func notFoundForUnknownRoute() async throws {
         let appState = AppState()
-        let listener = NetworkListener(port: Self.testPort + 3, serviceName: nil, appState: appState)
+        let listener = NetworkListener(port: Self.testPort, serviceName: nil, appState: appState)
 
         try listener.start { _ in }
         defer { listener.stop() }
 
-        try await waitForListener(port: Self.testPort + 3)
+        try await waitForListener(port: Self.testPort)
 
         // GET /unknown
-        let url = URL(string: "http://localhost:\(Self.testPort + 3)/unknown")!
+        let url = URL(string: "http://localhost:\(Self.testPort)/unknown")!
         let (data, response) = try await URLSession.shared.data(from: url)
         let http = try #require(response as? HTTPURLResponse)
 
