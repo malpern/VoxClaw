@@ -7,3 +7,4 @@ DerivedData/
 .env
 *.app
 DONTFORGET.md
+.nano-banana-config.json
