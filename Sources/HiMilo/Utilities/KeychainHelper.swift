@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Security
 
 enum KeychainHelper {
@@ -22,6 +23,7 @@ enum KeychainHelper {
     static func readAPIKey() throws -> String {
         // First check environment variable
         if let envKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !envKey.isEmpty {
+            Log.keychain.info("API key sourced from OPENAI_API_KEY env var")
             return envKey
         }
 
@@ -40,12 +42,16 @@ enum KeychainHelper {
         case errSecSuccess:
             guard let data = result as? Data,
                   let key = String(data: data, encoding: .utf8), !key.isEmpty else {
+                Log.keychain.error("Keychain returned unexpected data format")
                 throw KeychainError.unexpectedData
             }
+            Log.keychain.info("API key sourced from Keychain")
             return key
         case errSecItemNotFound:
+            Log.keychain.error("API key not found in Keychain")
             throw KeychainError.notFound
         default:
+            Log.keychain.error("Keychain error: status=\(status, privacy: .public)")
             throw KeychainError.osError(status)
         }
     }

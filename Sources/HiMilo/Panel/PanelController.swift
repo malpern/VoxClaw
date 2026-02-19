@@ -1,4 +1,5 @@
 import AppKit
+import os
 import SwiftUI
 
 @MainActor
@@ -11,7 +12,10 @@ final class PanelController {
     }
 
     func show() {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = NSScreen.main else {
+            Log.panel.error("No main screen available")
+            return
+        }
 
         let screenFrame = screen.visibleFrame
         let panelWidth = screenFrame.width / 3
@@ -46,10 +50,12 @@ final class PanelController {
             panel.animator().alphaValue = 1
         }
 
+        Log.panel.info("Panel shown: \(Int(panelWidth), privacy: .public)x\(Int(panelHeight), privacy: .public) at (\(Int(panelX), privacy: .public), \(Int(panelY), privacy: .public))")
         self.panel = panel
     }
 
     func dismiss() {
+        Log.panel.info("Panel dismissed")
         guard let panel else { return }
 
         let frame = panel.frame

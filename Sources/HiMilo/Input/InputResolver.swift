@@ -1,25 +1,34 @@
 import AppKit
 import Foundation
+import os
 
 enum InputResolver {
     static func resolve(positional: [String], clipboardFlag: Bool, filePath: String?) throws -> String {
         // Priority: file > clipboard > stdin > positional args
         if let path = filePath {
-            return try readFile(at: path)
+            let text = try readFile(at: path)
+            Log.input.info("Resolved from file (\(text.count, privacy: .public) chars)")
+            return text
         }
 
         if clipboardFlag {
-            return try readClipboard()
+            let text = try readClipboard()
+            Log.input.info("Resolved from clipboard (\(text.count, privacy: .public) chars)")
+            return text
         }
 
         if let piped = readStdin() {
+            Log.input.info("Resolved from stdin (\(piped.count, privacy: .public) chars)")
             return piped
         }
 
         if !positional.isEmpty {
-            return positional.joined(separator: " ")
+            let text = positional.joined(separator: " ")
+            Log.input.info("Resolved from positional args (\(text.count, privacy: .public) chars)")
+            return text
         }
 
+        Log.input.debug("No input resolved")
         return ""
     }
 

@@ -1,13 +1,23 @@
+import os
 import SwiftUI
 
 @main
 struct HiMiloLauncher {
     static func main() {
+        let args = ProcessInfo.processInfo.arguments
+        Log.app.info("launch args: \(args, privacy: .public)")
+        Log.app.info("bundlePath: \(Bundle.main.bundlePath, privacy: .public)")
+        Log.app.debug("isatty: \(isatty(STDIN_FILENO), privacy: .public)")
+
         let mode = ModeDetector.detect()
+        Log.app.info("mode: \(String(describing: mode), privacy: .public)")
+
         switch mode {
         case .cli:
+            Log.app.info("entering CLI mode")
             CLIParser.main()
         case .menuBar:
+            Log.app.info("entering menuBar mode")
             HiMiloApp.main()
         }
     }
@@ -16,6 +26,10 @@ struct HiMiloLauncher {
 struct HiMiloApp: App {
     @State private var appState = AppState()
     @State private var coordinator = AppCoordinator()
+
+    init() {
+        Log.app.info("App init, creating MenuBarExtra")
+    }
 
     var body: some Scene {
         MenuBarExtra("HiMilo", systemImage: "waveform") {
@@ -49,7 +63,7 @@ final class AppCoordinator {
             }
             self.networkListener = listener
         } catch {
-            print("Failed to start listener: \(error)")
+            Log.app.error("Failed to start listener: \(error)")
         }
     }
 

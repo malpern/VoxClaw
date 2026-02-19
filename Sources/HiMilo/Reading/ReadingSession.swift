@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 @MainActor
 final class ReadingSession {
@@ -14,6 +15,10 @@ final class ReadingSession {
     }
 
     func start(text: String, voice: String = "onyx") async {
+        let wordCount = text.split(separator: " ").count
+        let isAudioOnly = appState.audioOnly
+        Log.session.info("Session start: \(wordCount, privacy: .public) words, voice=\(voice, privacy: .public), audioOnly=\(isAudioOnly, privacy: .public)")
+
         appState.sessionState = .loading
         appState.words = text.split(separator: " ").map(String.init)
         appState.currentWordIndex = 0
@@ -37,6 +42,7 @@ final class ReadingSession {
 
             // Use heuristic timing until we know real duration
             let heuristicDuration = WordTimingEstimator.heuristicDuration(for: text)
+            Log.session.debug("Heuristic duration: \(heuristicDuration, privacy: .public)s")
             timings = WordTimingEstimator.estimate(words: appState.words, totalDuration: heuristicDuration)
 
             // Start display link for word highlighting
@@ -51,6 +57,7 @@ final class ReadingSession {
             // Recalculate timings with actual duration
             let realDuration = audioPlayer.totalDuration
             if realDuration > 0 {
+                Log.session.info("Real duration: \(realDuration, privacy: .public)s (heuristic was \(heuristicDuration, privacy: .public)s)")
                 timings = WordTimingEstimator.estimate(words: appState.words, totalDuration: realDuration)
             }
 
@@ -62,19 +69,21 @@ final class ReadingSession {
             }
 
         } catch {
-            print("Error: \(error)")
+            Log.session.error("Session error: \(error)")
             finish()
         }
     }
 
     func togglePause() {
         if appState.isPaused {
+            Log.session.info("Session resumed")
             audioPlayer.resume()
             appState.isPaused = false
             appState.sessionState = .playing
             startDisplayLink()
             showFeedback("▶ Play")
         } else {
+            Log.session.info("Session paused")
             audioPlayer.pause()
             appState.isPaused = true
             appState.sessionState = .paused
@@ -119,6 +128,7 @@ final class ReadingSession {
     }
 
     private func finish() {
+        Log.session.info("Session finished")
         stopDisplayLink()
         keyboardMonitor?.stop()
         keyboardMonitor = nil

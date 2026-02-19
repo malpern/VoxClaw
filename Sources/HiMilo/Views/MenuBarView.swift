@@ -1,3 +1,4 @@
+import os
 import ServiceManagement
 import SwiftUI
 
@@ -71,7 +72,7 @@ struct MenuBarView: View {
                             try SMAppService.mainApp.unregister()
                         }
                     } catch {
-                        print("Launch at login error: \(error)")
+                        Log.app.error("Launch at login error: \(error)")
                         launchAtLogin = SMAppService.mainApp.status == .enabled
                     }
                 }
@@ -109,7 +110,7 @@ struct MenuBarView: View {
             let text = try String(contentsOf: url, encoding: .utf8)
             await onReadText(text)
         } catch {
-            print("Error reading file: \(error)")
+            Log.app.error("Error reading file: \(error)")
         }
     }
 }

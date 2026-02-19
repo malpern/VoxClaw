@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 
 final class NetworkSession: Sendable {
     private let connection: NWConnection
@@ -44,6 +45,8 @@ final class NetworkSession: Sendable {
             let method = String(parts[0])
             let path = String(parts[1])
 
+            Log.network.debug("Request: \(method, privacy: .public) \(path, privacy: .public)")
+
             // Route the request
             switch (method, path) {
             case ("GET", "/status"):
@@ -54,6 +57,7 @@ final class NetworkSession: Sendable {
                 // CORS preflight
                 sendResponse(status: 204, body: nil)
             default:
+                Log.network.info("404: \(method, privacy: .public) \(path, privacy: .public)")
                 sendErrorResponse(status: 404, message: "Not found. Use POST /read or GET /status")
             }
         }
@@ -152,10 +156,12 @@ final class NetworkSession: Sendable {
         let text = parseTextFromBody(body)
 
         guard !text.isEmpty else {
+            Log.network.info("400: empty text body")
             sendErrorResponse(status: 400, message: "No text provided. Send JSON {\"text\":\"...\"} or plain text body.")
             return
         }
 
+        Log.network.info("Received text: \(text.count, privacy: .public) chars")
         Task {
             await onTextReceived(text)
             sendResponse(status: 200, body: "{\"status\":\"reading\"}", contentType: "application/json")

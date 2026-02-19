@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 
 @MainActor
 final class NetworkListener {
@@ -40,6 +41,8 @@ final class NetworkListener {
 
         listener?.start(queue: .main)
         appState.isListening = true
+        let listenPort = port
+        Log.network.info("Listener starting on port \(listenPort, privacy: .public)")
         printListeningInfo()
     }
 
@@ -48,14 +51,17 @@ final class NetworkListener {
         listener = nil
         appState.isListening = false
         onTextReceived = nil
+        Log.network.info("Listener stopped")
         print("HiMilo listener stopped")
     }
 
     private func handleStateUpdate(_ state: NWListener.State) {
         switch state {
         case .ready:
+            Log.network.info("Listener ready on port \(self.port, privacy: .public)")
             print("HiMilo HTTP listener ready")
         case .failed(let error):
+            Log.network.error("Listener failed: \(error)")
             print("Network listener failed: \(error)")
             stop()
         case .cancelled:
@@ -66,6 +72,7 @@ final class NetworkListener {
     }
 
     private func handleNewConnection(_ connection: NWConnection) {
+        Log.network.debug("New connection from \(String(describing: connection.endpoint), privacy: .public)")
         let session = NetworkSession(connection: connection) { [weak self] text in
             await self?.onTextReceived?(text)
         }

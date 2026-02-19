@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import os
 
 @MainActor
 final class AudioPlayer {
@@ -39,6 +40,7 @@ final class AudioPlayer {
     }
 
     func start() throws {
+        Log.audio.info("Audio engine starting")
         try engine.start()
         playerNode.play()
         isPlaying = true
@@ -63,6 +65,7 @@ final class AudioPlayer {
         }
 
         totalBytesScheduled += pcmData.count
+        Log.audio.debug("Scheduled chunk: \(sampleCount, privacy: .public) samples, totalDuration=\(self.totalDuration, privacy: .public)s")
         playerNode.scheduleBuffer(buffer)
     }
 
@@ -79,16 +82,19 @@ final class AudioPlayer {
     }
 
     func pause() {
+        Log.audio.info("Audio paused at \(self.currentTime, privacy: .public)s")
         playerNode.pause()
         isPlaying = false
     }
 
     func resume() {
+        Log.audio.info("Audio resumed at \(self.currentTime, privacy: .public)s")
         playerNode.play()
         isPlaying = true
     }
 
     func stop() {
+        Log.audio.info("Audio engine stopped")
         playerNode.stop()
         engine.stop()
         isPlaying = false
