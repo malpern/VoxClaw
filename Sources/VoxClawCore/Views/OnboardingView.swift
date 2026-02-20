@@ -5,7 +5,7 @@ import SwiftUI
 // MARK: - Step Enum
 
 enum OnboardingStep: Int, CaseIterable {
-    case welcome, voice, agentLocation, launchAtLogin, done
+    case welcome, apiKey, agentLocation, done
 }
 
 // MARK: - OnboardingView
@@ -14,47 +14,55 @@ struct OnboardingView: View {
     let settings: SettingsManager
 
     @State private var currentStep: OnboardingStep = .welcome
+    @State private var stepIndex = 0
     @State private var transitionEdge: Edge = .trailing
 
     // Collected state
     @State private var apiKey = ""
+    @State private var hasExistingKey = false
     @State private var agentLocation: AgentLocation = .thisMac
     @State private var networkEnabled = false
     @State private var port: String = "4140"
-    @State private var launchAtLogin = false
+    @State private var launchAtLogin = true
 
     // Audio
     @State private var narrator = OnboardingNarrator()
     @State private var demoPlayer = VoiceDemoPlayer()
     @State private var isPaused = false
 
+    private var steps: [OnboardingStep] {
+        if hasExistingKey {
+            return [.welcome, .done]
+        } else {
+            return [.welcome, .apiKey, .agentLocation, .done]
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            StepDots(current: currentStep)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
+            if !hasExistingKey {
+                StepDots(count: steps.count, currentIndex: stepIndex)
+                    .padding(.top, 20)
+                    .padding(.bottom, 16)
+            } else {
+                Spacer().frame(height: 20)
+            }
 
             Group {
                 switch currentStep {
                 case .welcome:
-                    WelcomeStep(demoPlayer: demoPlayer)
-                case .voice:
-                    VoiceStep(apiKey: $apiKey)
+                    WelcomeStep(demoPlayer: demoPlayer, hasExistingKey: hasExistingKey, narrator: narrator)
+                case .apiKey:
+                    APIKeyStep(apiKey: $apiKey)
                 case .agentLocation:
                     AgentLocationStep(
                         location: $agentLocation,
                         networkEnabled: $networkEnabled,
-                        port: $port
+                        port: $port,
+                        launchAtLogin: $launchAtLogin
                     )
-                case .launchAtLogin:
-                    LaunchAtLoginStep(launchAtLogin: $launchAtLogin)
                 case .done:
-                    DoneStep(
-                        hasAPIKey: !apiKey.isEmpty,
-                        agentLocation: agentLocation,
-                        networkEnabled: networkEnabled,
-                        launchAtLogin: launchAtLogin
-                    )
+                    SuccessStep()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -64,6 +72,7 @@ struct OnboardingView: View {
             NavBar(
                 step: currentStep,
                 isPaused: $isPaused,
+                isFirstStep: stepIndex == 0,
                 onBack: goBack,
                 onNext: goNext,
                 onDone: handleComplete
@@ -73,10 +82,36 @@ struct OnboardingView: View {
         .padding(.horizontal, 32)
         .frame(width: 500, height: 440)
         .task {
-            demoPlayer.playDemo()
+            let existingKey = settings.openAIAPIKey
+            if !existingKey.isEmpty {
+                apiKey = existingKey
+                hasExistingKey = true
+                Log.onboarding.info("Existing API key found, using short flow")
+                narrator.speak(
+                    text: "Hey! Welcome to VoxClaw — your agent can finally talk! Let's go!",
+                    apiKey: existingKey
+                )
+            } else {
+                hasExistingKey = false
+                demoPlayer.playDemo()
+            }
+        }
+        .onChange(of: narrator.didFailOpenAI) { _, failed in
+            if failed && hasExistingKey {
+                Log.onboarding.info("OpenAI narrator failed, switching to full onboarding flow")
+                hasExistingKey = false
+                narrator.stop()
+                demoPlayer.playDemo()
+            }
         }
         .onChange(of: currentStep) { _, newStep in
             handleStepChange(newStep)
+        }
+        .onChange(of: apiKey) { _, newKey in
+            // Persist key to keychain immediately so it survives window close
+            if !newKey.isEmpty {
+                settings.openAIAPIKey = newKey
+            }
         }
         .onChange(of: isPaused) { _, paused in
             if paused {
@@ -91,16 +126,18 @@ struct OnboardingView: View {
 
     private func goBack() {
         stopAllAudio()
-        guard let prev = OnboardingStep(rawValue: currentStep.rawValue - 1) else { return }
+        guard stepIndex > 0 else { return }
+        stepIndex -= 1
         transitionEdge = .leading
-        currentStep = prev
+        currentStep = steps[stepIndex]
     }
 
     private func goNext() {
         stopAllAudio()
-        guard let next = OnboardingStep(rawValue: currentStep.rawValue + 1) else { return }
+        guard stepIndex < steps.count - 1 else { return }
+        stepIndex += 1
         transitionEdge = .trailing
-        currentStep = next
+        currentStep = steps[stepIndex]
     }
 
     private func stopAllAudio() {
@@ -133,19 +170,16 @@ struct OnboardingView: View {
 
         switch step {
         case .welcome:
-            demoPlayer.playDemo()
-        case .voice:
+            if hasExistingKey {
+                narrator.speak(
+                    text: "Hey! Welcome to VoxClaw — your agent can finally talk! Let's go!",
+                    apiKey: apiKey
+                )
+            } else {
+                demoPlayer.playDemo()
+            }
+        case .apiKey, .agentLocation:
             break
-        case .agentLocation:
-            narrator.speak(
-                text: "OK so — where's your agent running? If it's on a different machine, like a Mac Mini, just flip on the network listener and VoxClaw picks it up. Super easy.",
-                apiKey: apiKey.isEmpty ? nil : apiKey
-            )
-        case .launchAtLogin:
-            narrator.speak(
-                text: "Alright — VoxClaw hangs out in your menu bar. You probably want it to start automatically when you log in, so your agent can talk to you whenever.",
-                apiKey: apiKey.isEmpty ? nil : apiKey
-            )
         case .done:
             narrator.speak(
                 text: "Boom — you're all set! VoxClaw is ready to go. Your agent finally has a voice. This is gonna be great.",
@@ -155,22 +189,17 @@ struct OnboardingView: View {
     }
 }
 
-// MARK: - Agent Location
-
-enum AgentLocation {
-    case thisMac, remoteMachine
-}
-
 // MARK: - Step Dots
 
 private struct StepDots: View {
-    let current: OnboardingStep
+    let count: Int
+    let currentIndex: Int
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(OnboardingStep.allCases, id: \.rawValue) { step in
+            ForEach(0..<count, id: \.self) { index in
                 Circle()
-                    .fill(step == current ? Color.accentColor : Color.secondary.opacity(0.3))
+                    .fill(index == currentIndex ? Color.accentColor : Color.secondary.opacity(0.3))
                     .frame(width: 8, height: 8)
             }
         }
@@ -182,13 +211,14 @@ private struct StepDots: View {
 private struct NavBar: View {
     let step: OnboardingStep
     @Binding var isPaused: Bool
+    let isFirstStep: Bool
     let onBack: () -> Void
     let onNext: () -> Void
     let onDone: () -> Void
 
     var body: some View {
         HStack {
-            if step != .welcome {
+            if !isFirstStep {
                 Button("Back") { onBack() }
                     .buttonStyle(.glass)
             }
@@ -203,7 +233,7 @@ private struct NavBar: View {
                 .help(isPaused ? "Resume" : "Pause")
                 .padding(.trailing, 8)
 
-            if step == .welcome {
+            if isFirstStep {
                 Button("Get Started") { onNext() }
                     .buttonStyle(.glassProminent)
             } else if step == .done {
@@ -222,6 +252,8 @@ private struct NavBar: View {
 
 private struct WelcomeStep: View {
     let demoPlayer: VoiceDemoPlayer
+    let hasExistingKey: Bool
+    let narrator: OnboardingNarrator
 
     var body: some View {
         VStack(spacing: 16) {
@@ -242,35 +274,49 @@ private struct WelcomeStep: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            // Voice indicator showing which voice is speaking
-            HStack(spacing: 24) {
+            if hasExistingKey {
+                // Existing key — just show a single waveform for live OpenAI speech
                 HStack(spacing: 6) {
                     Image(systemName: "waveform")
-                        .symbolEffect(.variableColor.iterative.reversing, isActive: demoPlayer.isPlayingOpenAI)
-                        .foregroundStyle(demoPlayer.isPlayingOpenAI ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .symbolEffect(.variableColor.iterative.reversing, isActive: narrator.isSpeaking)
+                        .foregroundStyle(narrator.isSpeaking ? Color.accentColor : Color.secondary.opacity(0.3))
                     Text("OpenAI")
                         .font(.caption)
-                        .fontWeight(demoPlayer.isPlayingOpenAI ? .bold : .regular)
-                        .foregroundStyle(demoPlayer.isPlayingOpenAI ? Color.accentColor : .secondary)
+                        .fontWeight(narrator.isSpeaking ? .bold : .regular)
+                        .foregroundStyle(narrator.isSpeaking ? Color.accentColor : .secondary)
                 }
-                HStack(spacing: 6) {
-                    Image(systemName: "waveform")
-                        .symbolEffect(.variableColor.iterative.reversing, isActive: demoPlayer.isPlayingApple)
-                        .foregroundStyle(demoPlayer.isPlayingApple ? Color.accentColor : Color.secondary.opacity(0.3))
-                    Text("Apple")
-                        .font(.caption)
-                        .fontWeight(demoPlayer.isPlayingApple ? .bold : .regular)
-                        .foregroundStyle(demoPlayer.isPlayingApple ? Color.accentColor : .secondary)
+                .padding(.top, 4)
+            } else {
+                // No key — show both voice indicators for bundled demo
+                HStack(spacing: 24) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "waveform")
+                            .symbolEffect(.variableColor.iterative.reversing, isActive: demoPlayer.isPlayingOpenAI)
+                            .foregroundStyle(demoPlayer.isPlayingOpenAI ? Color.accentColor : Color.secondary.opacity(0.3))
+                        Text("OpenAI")
+                            .font(.caption)
+                            .fontWeight(demoPlayer.isPlayingOpenAI ? .bold : .regular)
+                            .foregroundStyle(demoPlayer.isPlayingOpenAI ? Color.accentColor : .secondary)
+                    }
+                    HStack(spacing: 6) {
+                        Image(systemName: "waveform")
+                            .symbolEffect(.variableColor.iterative.reversing, isActive: demoPlayer.isPlayingApple)
+                            .foregroundStyle(demoPlayer.isPlayingApple ? Color.accentColor : Color.secondary.opacity(0.3))
+                        Text("Apple")
+                            .font(.caption)
+                            .fontWeight(demoPlayer.isPlayingApple ? .bold : .regular)
+                            .foregroundStyle(demoPlayer.isPlayingApple ? Color.accentColor : .secondary)
+                    }
                 }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
     }
 }
 
-// MARK: - Voice Step
+// MARK: - API Key Step
 
-private struct VoiceStep: View {
+private struct APIKeyStep: View {
     @Binding var apiKey: String
 
     var body: some View {
@@ -328,12 +374,21 @@ private struct VoiceStep: View {
     }
 }
 
+// MARK: - Agent Location
+
+enum AgentLocation {
+    case thisMac, remoteMachine
+}
+
 // MARK: - Agent Location Step
 
 private struct AgentLocationStep: View {
     @Binding var location: AgentLocation
     @Binding var networkEnabled: Bool
     @Binding var port: String
+    @Binding var launchAtLogin: Bool
+
+    @State private var isEditingPort = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -351,7 +406,6 @@ private struct AgentLocationStep: View {
                 .multilineTextAlignment(.center)
 
             VStack(spacing: 10) {
-                // This Mac option
                 Button {
                     location = .thisMac
                     networkEnabled = false
@@ -383,7 +437,6 @@ private struct AgentLocationStep: View {
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 10))
 
-                // Remote machine option
                 Button {
                     location = .remoteMachine
                     networkEnabled = true
@@ -395,15 +448,33 @@ private struct AgentLocationStep: View {
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Another Machine")
-                                .font(.body)
-                                .fontWeight(.medium)
-                            Text("Agent sends text over the network")
+                            HStack(spacing: 6) {
+                                Text("Another Machine")
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                if location == .remoteMachine {
+                                    Text("port \(port)")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            Text("Network listener on — agent sends text over the network")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
 
                         Spacer()
+
+                        if location == .remoteMachine {
+                            Button {
+                                isEditingPort = true
+                            } label: {
+                                Text("Edit")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.accentColor)
+                        }
 
                         Image(systemName: location == .remoteMachine ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(location == .remoteMachine ? Color.accentColor : Color.secondary.opacity(0.3))
@@ -416,130 +487,35 @@ private struct AgentLocationStep: View {
                 .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 10))
             }
 
-            if location == .remoteMachine {
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Enable network listener", isOn: $networkEnabled)
-
-                    if networkEnabled {
-                        HStack {
-                            Text("Port")
-                            Spacer()
-                            TextField("4140", text: $port)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 70)
-                        }
-                    }
-                }
-                .padding(12)
-                .glassEffect(.regular, in: .rect(cornerRadius: 10))
-                .transition(.opacity)
-            }
+            Toggle("Launch at Login", isOn: $launchAtLogin)
+        }
+        .alert("Network Listener Port", isPresented: $isEditingPort) {
+            TextField("Port", text: $port)
+            Button("OK") {}
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter the port VoxClaw should listen on.")
         }
     }
 }
 
-// MARK: - Launch at Login Step
+// MARK: - Success Step
 
-private struct LaunchAtLoginStep: View {
-    @Binding var launchAtLogin: Bool
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "sunrise.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.orange)
-
-            Text("Stay Ready")
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text("VoxClaw lives in your menu bar.\nStart it automatically when you log in.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Launch at Login", isOn: $launchAtLogin)
-
-                Text("Your agent can speak the moment your Mac is ready.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 10))
-        }
-    }
-}
-
-// MARK: - Done Step
-
-private struct DoneStep: View {
-    let hasAPIKey: Bool
-    let agentLocation: AgentLocation
-    let networkEnabled: Bool
-    let launchAtLogin: Bool
-
+private struct SuccessStep: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 64))
                 .foregroundStyle(.green)
 
             Text("You're All Set")
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.title)
+                .fontWeight(.bold)
 
             Text("VoxClaw is ready to give your agent a voice.")
                 .font(.body)
                 .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 10) {
-                SummaryRow(
-                    icon: "speaker.wave.2.fill",
-                    label: "Voice",
-                    value: hasAPIKey ? "OpenAI" : "Built-in (Apple)"
-                )
-                SummaryRow(
-                    icon: agentLocation == .thisMac ? "laptopcomputer" : "network",
-                    label: "Agent",
-                    value: agentLocation == .thisMac ? "This Mac" : "Remote"
-                )
-                if networkEnabled {
-                    SummaryRow(
-                        icon: "antenna.radiowaves.left.and.right",
-                        label: "Listener",
-                        value: "Enabled"
-                    )
-                }
-                SummaryRow(
-                    icon: "sunrise.fill",
-                    label: "Launch at Login",
-                    value: launchAtLogin ? "On" : "Off"
-                )
-            }
-            .padding(12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 10))
         }
-    }
-}
-
-private struct SummaryRow: View {
-    let icon: String
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            Text(label)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .fontWeight(.medium)
-        }
-        .font(.callout)
     }
 }
 
@@ -632,6 +608,7 @@ final class VoiceDemoPlayer {
 @MainActor @Observable
 final class OnboardingNarrator: NSObject {
     var isSpeaking = false
+    var didFailOpenAI = false
 
     private var player: AVAudioPlayer?
     private var playerDelegate: AudioFinishDelegate?
@@ -641,6 +618,7 @@ final class OnboardingNarrator: NSObject {
 
     func speak(text: String, apiKey: String?) {
         stop()
+        didFailOpenAI = false
 
         if let apiKey, !apiKey.isEmpty {
             speakWithOpenAI(text: text, apiKey: apiKey)
@@ -698,7 +676,10 @@ final class OnboardingNarrator: NSObject {
 
                 guard !Task.isCancelled else { return }
                 guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                    Log.onboarding.error("Narrator OpenAI error, falling back to Apple")
+                    let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                    let body = String(data: data, encoding: .utf8) ?? "no body"
+                    Log.onboarding.error("Narrator OpenAI error (status \(statusCode)): \(body), falling back to Apple")
+                    didFailOpenAI = true
                     speakWithApple(text: text)
                     return
                 }
@@ -713,6 +694,7 @@ final class OnboardingNarrator: NSObject {
             } catch {
                 guard !Task.isCancelled else { return }
                 Log.onboarding.error("Narrator fetch error: \(error), falling back to Apple")
+                didFailOpenAI = true
                 speakWithApple(text: text)
             }
         }
