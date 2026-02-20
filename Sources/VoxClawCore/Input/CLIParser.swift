@@ -35,7 +35,7 @@ struct CLIParser: ParsableCommand {
           Structured logs via os.Logger (subsystem: com.malpern.voxclaw):
             log stream --predicate 'subsystem == "com.malpern.voxclaw"' --level debug
         """,
-        version: "1.0.0 (1)"
+        version: "1.0.1 (2)"
     )
 
     @Flag(name: [.short, .customLong("audio-only")], help: "Play audio without showing the overlay")
