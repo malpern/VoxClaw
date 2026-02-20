@@ -159,8 +159,6 @@ Tests/
 swift test
 ```
 
-85 tests across 13 suites covering word timing, app state, HTTP parsing, mode detection, input resolution, network listener integration, settings, keychain, and onboarding resources.
-
 ### CI
 
 GitHub Actions runs on every push to `main` and on pull requests. See `.github/workflows/ci.yml`.

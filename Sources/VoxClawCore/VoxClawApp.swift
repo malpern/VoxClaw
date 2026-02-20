@@ -105,6 +105,11 @@ struct VoxClawApp: App {
         }
         .defaultSize(width: 440, height: 420)
 
+        Window("About VoxClaw", id: "about") {
+            AboutView()
+        }
+        .windowResizability(.contentSize)
+
     }
 
     // MARK: - URL Scheme (voxclaw://read?text=...)

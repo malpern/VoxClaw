@@ -92,6 +92,11 @@ struct MenuBarView: View {
                 }
             }
 
+            Button("About VoxClaw") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "about")
+            }
+
             Divider()
 
             Button("Quit") {
