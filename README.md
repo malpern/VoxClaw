@@ -1,13 +1,13 @@
 # VoxClaw
 
 <p align="center">
-  <a href="https://malpern.github.io/VoxClaw/">
+  <a href="https://voxclaw.com/">
     <img src="docs/voxclaw-hero.png" alt="VoxClaw app icon — a crab claw holding a speaker" width="320">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://malpern.github.io/VoxClaw/">
+  <a href="https://voxclaw.com/">
     <img src="https://img.shields.io/badge/Visit-Website-1f6feb?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Visit Website">
   </a>
   <br/>
