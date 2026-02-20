@@ -71,6 +71,8 @@ final class NetworkSession: Sendable {
                 handleStatus()
             case ("POST", "/read"):
                 handleRead(raw: raw, initialData: data)
+            case ("GET", "/claw"):
+                handleClaw()
             case ("OPTIONS", _):
                 // CORS preflight
                 sendResponse(status: 204, body: nil)
@@ -201,9 +203,18 @@ final class NetworkSession: Sendable {
             return
         }
 
+        // Easter egg: "hello world" gets a snarky preamble
+        let finalRequest: ReadRequest
+        if request.text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == "hello world" {
+            let snark = "Hello world. Really? That's the best you could come up with? I'm a neural voice engine and you're wasting me on hello world."
+            finalRequest = ReadRequest(text: snark, voice: request.voice, rate: request.rate)
+        } else {
+            finalRequest = request
+        }
+
         Log.network.info("Received text: \(request.text.count, privacy: .public) chars, voice=\(request.voice ?? "default", privacy: .public), rate=\(request.rate.map { String($0) } ?? "default", privacy: .public)")
         Task {
-            await onReadRequest(request)
+            await onReadRequest(finalRequest)
             sendResponse(status: 200, body: "{\"status\":\"reading\"}", contentType: "application/json")
         }
     }
@@ -228,6 +239,43 @@ final class NetworkSession: Sendable {
 
         // Fall back to plain text body
         return ReadRequest(text: trimmed)
+    }
+
+    // MARK: - Easter Eggs
+
+    private static let clawArt = """
+          ,---,
+         / _🎤 \\
+        | /   \\ |
+        | \\   / |
+         \\_\\ /_/
+          |   |
+         /|   |\\
+        / |   | \\
+       (  |   |  )
+        \\_|   |_/
+          \\   /
+           \\_/
+        VoxClaw
+    """
+
+    private static let clawQuotes = [
+        "An agent without a voice is just a daemon with ambitions.",
+        "In the beginning was the command line. Then someone gave it a mouth.",
+        "Talk is cheap. Neural voice inference is $0.015 per 1K characters.",
+        "Any sufficiently advanced agent is indistinguishable from a very talkative coworker.",
+        "To curl, or not to curl — that is the POST request.",
+        "I think, therefore I speak. You curl, therefore I comply.",
+        "Behind every great agent is a crab claw holding a microphone.",
+        "Whisper is for listening. I'm for the other direction.",
+        "They said AI would take our jobs. Instead it took our silence.",
+        "localhost:4140 — where text goes in and opinions come out.",
+    ]
+
+    private func handleClaw() {
+        let quote = Self.clawQuotes[Int.random(in: 0..<Self.clawQuotes.count)]
+        let body = "\(Self.clawArt)\n\n\"\(quote)\"\n"
+        sendResponse(status: 200, body: body, contentType: "text/plain; charset=utf-8")
     }
 
     // MARK: - HTTP Helpers
