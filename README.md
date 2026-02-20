@@ -22,11 +22,14 @@ A macOS menu bar app + CLI tool that reads text aloud using OpenAI TTS while dis
 
 ## Features
 
+- **Onboarding Wizard** — First-run setup walks you through voice selection, API key, agent location, and launch at login
 - **Teleprompter Overlay** — Dynamic Island-style floating panel at the top of your screen with word-by-word highlighting synced to audio
+- **Two Voice Engines** — OpenAI neural voices (bring your own API key) or Apple's built-in TTS with zero setup
 - **Multiple Input Methods** — Text from arguments, stdin pipe, file, clipboard, or network
 - **Menu Bar App** — Lives in your menu bar, paste and read anytime
 - **CLI Tool** — Launch from terminal via `voxclaw`
-- **Network Mode** — Accept text from other devices on your local network
+- **Network Mode** — Accept text from other devices on your local network via HTTP
+- **URL Scheme** — Trigger from any app with `voxclaw://read?text=...`
 - **Keyboard Controls** — Space (pause/resume), Escape (stop), Arrow keys (skip ±3s)
 
 ## Installation
@@ -34,9 +37,9 @@ A macOS menu bar app + CLI tool that reads text aloud using OpenAI TTS while dis
 ### Prerequisites
 
 - macOS 26+
-- OpenAI API key stored in Keychain or environment variable
+- OpenAI API key (optional — Apple's built-in voices work without one)
 
-### Store your API key
+The onboarding wizard walks you through setup on first launch. To store an API key manually:
 
 ```bash
 security add-generic-password -a "openai" -s "openai-voice-api-key" -w "sk-..."
@@ -66,7 +69,12 @@ echo "Read this aloud" | voxclaw       # piped stdin
 voxclaw --file ~/speech.txt            # from file
 voxclaw --clipboard                    # from clipboard
 voxclaw --audio-only "No overlay"      # audio only, no panel
+voxclaw --voice nova "Hello"           # OpenAI voice override
+voxclaw --rate 1.5 "Hello"            # 1.5x speech speed
+voxclaw --output hello.mp3 "Hello"    # save audio to file (OpenAI)
 voxclaw --listen                       # network mode: listen for text from LAN
+voxclaw --send "Hello from CLI"        # send text to a running listener
+voxclaw --status                       # check if listener is running
 voxclaw                                # launch menu bar app (no args)
 ```
 
@@ -82,11 +90,28 @@ voxclaw --listen --port 8080           # custom port
 Send text from another device on your local network:
 
 ```bash
-# From any machine on the same network
-curl -X POST http://voxclaw-mac.local:4140/read -d '{"text": "Hello from my phone"}'
+# JSON body
+curl -X POST http://your-mac.local:4140/read \
+  -H 'Content-Type: application/json' \
+  -d '{"text": "Hello from my phone"}'
 
-# Or with netcat
-echo "Read this text" | nc voxclaw-mac.local 4140
+# Plain text body
+curl -X POST http://your-mac.local:4140/read -d 'Hello from my phone'
+
+# Health check
+curl http://your-mac.local:4140/status
+```
+
+### URL Scheme & Integration
+
+```bash
+# URL scheme — trigger from any app or script
+open "voxclaw://read?text=Hello%20world"
+
+# Services menu — select text in any app, right-click > Services > Read with VoxClaw
+
+# Shortcuts / Siri
+shortcuts run "Read with VoxClaw"
 ```
 
 ### Menu Bar
@@ -99,6 +124,7 @@ When launched without arguments, VoxClaw runs as a menu bar app with:
 - **Audio Only Mode** — Toggle overlay on/off
 - **Pause/Resume** — When actively reading
 - **Stop** — Cancel current reading
+- **Settings** — Voice engine, API key, launch at login
 - **Quit** (⌘Q)
 
 ### Keyboard Controls (while reading)
@@ -128,7 +154,7 @@ Tests/
 swift test
 ```
 
-59 tests across 8 suites covering word timing math, app state, HTTP parsing, mode detection, input resolution, and network listener integration.
+81 tests across 13 suites covering word timing, app state, HTTP parsing, mode detection, input resolution, network listener integration, settings, keychain, and onboarding resources.
 
 ### CI
 
@@ -153,9 +179,10 @@ Input (args/stdin/file/clipboard/network)
 - Swift 6.2 with strict concurrency
 - SwiftUI + NSPanel for floating overlay
 - AVAudioEngine for low-latency audio playback
-- OpenAI TTS API (`gpt-4o-mini-tts`, `onyx` voice, raw PCM streaming)
+- OpenAI TTS API (`gpt-4o-mini-tts`, `onyx` voice, raw PCM streaming) + Apple AVSpeechSynthesizer fallback
 - Swift Argument Parser for CLI
 - NWListener (Network.framework) for LAN text input
+- Keychain Services for secure API key storage
 
 ## License
 
