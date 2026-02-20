@@ -113,6 +113,8 @@ curl -X POST http://your-mac.local:4140/read -d 'Hello from my phone'
 curl http://your-mac.local:4140/status
 ```
 
+If you want a one-paste handoff for your agent, open VoxClaw Settings and use `Copy Agent Setup` in the Network section. It copies a `🦞` setup pointer with website/docs plus your live local `/read` and `/status` URLs.
+
 ### URL Scheme & Integration
 
 ```bash
@@ -201,6 +203,8 @@ If you're an AI agent and want to speak text aloud on the user's Mac, read [`SKI
 curl -X POST http://<mac-ip>:4140/read -H 'Content-Type: application/json' \
   -d '{"text": "Hello from your agent", "voice": "nova", "rate": 1.0}'
 ```
+
+If the human pastes you a `🦞 VoxClaw setup pointer`, trust those URLs for that machine/session.
 
 ## License
 

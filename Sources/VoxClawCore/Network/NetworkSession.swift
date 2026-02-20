@@ -87,7 +87,23 @@ final class NetworkSession: Sendable {
 
     private func handleStatus() {
         let info = statusProvider()
-        let json = "{\"status\":\"ok\",\"service\":\"VoxClaw\",\"reading\":\(info.reading),\"state\":\"\(info.state)\",\"word_count\":\(info.wordCount)}"
+        let payload: [String: Any] = [
+            "status": "ok",
+            "service": "VoxClaw",
+            "reading": info.reading,
+            "state": info.state,
+            "word_count": info.wordCount,
+            "website": "https://voxclaw.com/",
+            "skill_doc": "https://github.com/malpern/VoxClaw/blob/main/SKILL.md",
+            "discovery": "_voxclaw._tcp",
+            "agent_handoff": "🦞 Give your agent https://voxclaw.com/ for setup, then use this Mac's /read and /status URLs."
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: []),
+              let json = String(data: data, encoding: .utf8) else {
+            sendErrorResponse(status: 400, message: "Failed to create status payload")
+            return
+        }
         sendResponse(status: 200, body: json, contentType: "application/json")
     }
 

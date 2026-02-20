@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var settings: SettingsManager
+    @State private var copiedAgentHandoff = false
 
     var body: some View {
         Form {
@@ -19,7 +20,7 @@ struct SettingsView: View {
             generalSection
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: settings.voiceEngine == .openai ? 580 : 500)
+        .frame(width: 460, height: settings.voiceEngine == .openai ? 700 : 620)
     }
 
     // MARK: - Voice Engine Picker
@@ -172,6 +173,37 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Share this with your agent")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(agentHandoffText)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary.opacity(0.3))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    HStack {
+                        Button(copiedAgentHandoff ? "Copied" : "Copy Agent Setup") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(agentHandoffText, forType: .string)
+                            copiedAgentHandoff = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                copiedAgentHandoff = false
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Text("Includes website pointer, skill doc, and this Mac's URLs.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 6)
             }
         } header: {
             Text("Network")
@@ -203,6 +235,28 @@ struct SettingsView: View {
         AVSpeechSynthesisVoice.speechVoices()
             .filter { $0.language.hasPrefix("en") }
             .sorted { $0.name < $1.name }
+    }
+
+    private var localHostName: String {
+        ProcessInfo.processInfo.hostName
+            .replacingOccurrences(of: ".local", with: "")
+    }
+
+    private var hostForAgents: String {
+        "\(localHostName).local"
+    }
+
+    private var agentHandoffText: String {
+        let base = "http://\(hostForAgents):\(settings.networkListenerPort)"
+        return """
+        🦞 VoxClaw setup pointer:
+        - Website: https://voxclaw.com/
+        - Agent skill/API doc: https://github.com/malpern/VoxClaw/blob/main/SKILL.md
+        - Speak URL: \(base)/read
+        - Health URL: \(base)/status
+        - Test:
+          curl -X POST \(base)/read -H 'Content-Type: application/json' -d '{"text":"Hello from OpenClaw"}'
+        """
     }
 
     private let openAIVoices = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"]

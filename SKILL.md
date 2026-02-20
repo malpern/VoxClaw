@@ -15,6 +15,16 @@ This is useful when your agent runs on a remote server or headless machine and y
 
 VoxClaw runs an HTTP listener (default port 4140) on the user's Mac. To speak text, POST to the `/read` endpoint. The user hears the text immediately through their Mac speakers with a teleprompter overlay showing synchronized word highlighting.
 
+## Fast Handoff (Human -> Agent)
+
+If the human shares a `🦞 VoxClaw setup pointer`, use it directly. It includes:
+- website pointer (`https://voxclaw.com/`)
+- integration doc (`SKILL.md`)
+- machine-specific `Speak URL` (`/read`)
+- machine-specific `Health URL` (`/status`)
+
+Prefer those provided URLs over guessed hostnames when both are available.
+
 ## API
 
 ### Speak Text
@@ -59,7 +69,10 @@ curl http://<mac-ip>:4140/status
   "service": "VoxClaw",
   "reading": true,
   "state": "playing",
-  "word_count": 42
+  "word_count": 42,
+  "website": "https://voxclaw.com/",
+  "skill_doc": "https://github.com/malpern/VoxClaw/blob/main/SKILL.md",
+  "discovery": "_voxclaw._tcp"
 }
 ```
 

@@ -514,10 +514,28 @@ private struct AgentLocationStep: View {
 private struct SuccessStep: View {
     let isRemote: Bool
     let port: String
+    @State private var copiedAgentHandoff = false
 
     private var hostname: String {
         ProcessInfo.processInfo.hostName
             .replacingOccurrences(of: ".local", with: "")
+    }
+
+    private var hostForAgents: String {
+        "\(hostname).local"
+    }
+
+    private var agentHandoffText: String {
+        let base = "http://\(hostForAgents):\(port)"
+        return """
+        🦞 VoxClaw setup pointer:
+        - Website: https://voxclaw.com/
+        - Agent skill/API doc: https://github.com/malpern/VoxClaw/blob/main/SKILL.md
+        - Speak URL: \(base)/read
+        - Health URL: \(base)/status
+        - Test:
+          curl -X POST \(base)/read -H 'Content-Type: application/json' -d '{"text":"Hello from OpenClaw"}'
+        """
     }
 
     var body: some View {
@@ -547,6 +565,34 @@ private struct SuccessStep: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.quaternary.opacity(0.3))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Text("Or paste this setup pointer to your agent:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(agentHandoffText)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary.opacity(0.3))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    HStack {
+                        Button(copiedAgentHandoff ? "Copied" : "Copy Agent Setup") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(agentHandoffText, forType: .string)
+                            copiedAgentHandoff = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                copiedAgentHandoff = false
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Text("Single paste with website, docs, and live URLs.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(.top, 4)
             }
