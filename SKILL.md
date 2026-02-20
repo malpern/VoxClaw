@@ -24,6 +24,7 @@ If the human shares a `🦞 VoxClaw setup pointer`, use it directly. It includes
 - machine-specific `Health URL` (`/status`)
 
 Prefer those provided URLs over guessed hostnames when both are available.
+For LAN calls, prefer numeric IP URLs first; use `.local` hostnames as fallback only.
 
 ## API
 

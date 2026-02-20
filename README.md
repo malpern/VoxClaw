@@ -113,6 +113,8 @@ curl -X POST http://your-mac.local:4140/read -d 'Hello from my phone'
 curl http://your-mac.local:4140/status
 ```
 
+Cross-machine tip: use the Mac's numeric LAN IP first (for example `http://192.168.1.50:4140`). Treat `.local` hostnames as a fallback if mDNS is working on your network.
+
 If you want a one-paste handoff for your agent, open VoxClaw Settings and use `Copy Agent Setup` in the Network section. It copies a `🦞` setup pointer with website/docs plus your live local `/read` and `/status` URLs.
 
 ### URL Scheme & Integration

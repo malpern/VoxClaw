@@ -526,15 +526,22 @@ private struct SuccessStep: View {
     }
 
     private var agentHandoffText: String {
-        let base = "http://\(hostForAgents):\(port)"
+        let localBase = "http://localhost:\(port)"
+        let lanIP = NetworkListener.localIPAddress()
+        let ipBase = lanIP.map { "http://\($0):\(port)" }
+        let localFallbackBase = "http://\(hostForAgents):\(port)"
+        let speakURL = ipBase ?? localFallbackBase
+        let healthURL = "\(speakURL)/status"
         return """
         🦞 VoxClaw setup pointer:
         - Website: https://voxclaw.com/
         - Agent skill/API doc: https://github.com/malpern/VoxClaw/blob/main/SKILL.md
-        - Speak URL: \(base)/read
-        - Health URL: \(base)/status
+        - First check on VoxClaw Mac only: \(localBase)/status
+        - Speak URL (LAN, preferred): \(speakURL)/read
+        - Health URL (LAN, preferred): \(healthURL)
+        - .local fallback: \(localFallbackBase)/read and \(localFallbackBase)/status
         - Test:
-          curl -X POST \(base)/read -H 'Content-Type: application/json' -d '{"text":"Hello from OpenClaw"}'
+          curl -X POST \(speakURL)/read -H 'Content-Type: application/json' -d '{"text":"Hello from OpenClaw"}'
         """
     }
 
