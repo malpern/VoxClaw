@@ -225,8 +225,12 @@ private struct NavBar: View {
     var body: some View {
         HStack {
             if !isFirstStep {
-                Button("Back") { onBack() }
-                    .buttonStyle(.glass)
+                if #available(macOS 26, *) {
+                    Button("Back") { onBack() }
+                        .buttonStyle(.glass)
+                } else {
+                    Button("Back") { onBack() }
+                }
             }
 
             Spacer()
@@ -242,14 +246,29 @@ private struct NavBar: View {
             }
 
             if isFirstStep {
-                Button("Get Started") { onNext() }
-                    .buttonStyle(.glassProminent)
+                if #available(macOS 26, *) {
+                    Button("Get Started") { onNext() }
+                        .buttonStyle(.glassProminent)
+                } else {
+                    Button("Get Started") { onNext() }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if step == .done {
-                Button("Done") { onDone() }
-                    .buttonStyle(.glassProminent)
+                if #available(macOS 26, *) {
+                    Button("Done") { onDone() }
+                        .buttonStyle(.glassProminent)
+                } else {
+                    Button("Done") { onDone() }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
-                Button("Continue") { onNext() }
-                    .buttonStyle(.glassProminent)
+                if #available(macOS 26, *) {
+                    Button("Continue") { onNext() }
+                        .buttonStyle(.glassProminent)
+                } else {
+                    Button("Continue") { onNext() }
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
         .padding(.top, 12)
@@ -377,7 +396,7 @@ private struct APIKeyStep: View {
                 }
             }
             .padding(12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 10))
+            .modifier(GlassBackgroundModifier())
         }
     }
 }
@@ -484,7 +503,7 @@ private struct AgentLocationStep: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 10))
+        .modifier(GlassInteractiveModifier())
     }
 }
 
@@ -724,6 +743,28 @@ final class OnboardingNarrator: NSObject {
         synthDelegate = delegate
         synthesizer.delegate = delegate
         synthesizer.speak(utterance)
+    }
+}
+
+// MARK: - Glass Compatibility Modifiers
+
+private struct GlassBackgroundModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content.glassEffect(.regular, in: .rect(cornerRadius: 10))
+        } else {
+            content.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
+}
+
+private struct GlassInteractiveModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 10))
+        } else {
+            content.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        }
     }
 }
 
