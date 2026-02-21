@@ -148,6 +148,7 @@ struct SettingsView: View {
     private var playbackSection: some View {
         Section("Playback") {
             Toggle("Audio Only (no teleprompter overlay)", isOn: $settings.audioOnly)
+            Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
         }
     }
 

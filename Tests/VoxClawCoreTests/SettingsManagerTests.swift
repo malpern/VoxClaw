@@ -39,4 +39,10 @@ struct SettingsManagerTests {
         let settings = SettingsManager()
         #expect(settings.audioOnly == false)
     }
+
+    @Test func pauseOtherAudioDefaultsTrue() {
+        UserDefaults.standard.removeObject(forKey: "pauseOtherAudioDuringSpeech")
+        let settings = SettingsManager()
+        #expect(settings.pauseOtherAudioDuringSpeech == true)
+    }
 }

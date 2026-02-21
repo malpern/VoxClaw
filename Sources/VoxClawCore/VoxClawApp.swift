@@ -267,7 +267,11 @@ final class AppCoordinator {
         activeSession?.stop()
         appState.audioOnly = audioOnlyOverride ?? settings.audioOnly
         let engine = engineOverride ?? settings.createEngine()
-        let session = ReadingSession(appState: appState, engine: engine)
+        let session = ReadingSession(
+            appState: appState,
+            engine: engine,
+            pauseExternalAudioDuringSpeech: settings.pauseOtherAudioDuringSpeech
+        )
         activeSession = session
         await session.start(text: text)
     }

@@ -5,11 +5,21 @@ import os
 final class ReadingSession: SpeechEngineDelegate {
     private let appState: AppState
     private let engine: any SpeechEngine
+    private let pauseExternalAudioDuringSpeech: Bool
+    private let playbackController: any ExternalPlaybackControlling
     private var panelController: PanelController?
+    private var pausedExternalAudio = false
 
-    init(appState: AppState, engine: any SpeechEngine) {
+    init(
+        appState: AppState,
+        engine: any SpeechEngine,
+        pauseExternalAudioDuringSpeech: Bool = false,
+        playbackController: any ExternalPlaybackControlling = ExternalPlaybackController()
+    ) {
         self.appState = appState
         self.engine = engine
+        self.pauseExternalAudioDuringSpeech = pauseExternalAudioDuringSpeech
+        self.playbackController = playbackController
         engine.delegate = self
     }
 
@@ -26,6 +36,10 @@ final class ReadingSession: SpeechEngineDelegate {
         if !appState.audioOnly {
             panelController = PanelController(appState: appState)
             panelController?.show()
+        }
+
+        if pauseExternalAudioDuringSpeech {
+            pausedExternalAudio = playbackController.pauseIfPlaying()
         }
 
         await engine.start(text: text, words: words)
@@ -87,6 +101,10 @@ final class ReadingSession: SpeechEngineDelegate {
     private func finish() {
         Log.session.info("Session finished")
         appState.sessionState = .finished
+        if pausedExternalAudio {
+            playbackController.resumePaused()
+            pausedExternalAudio = false
+        }
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(500))

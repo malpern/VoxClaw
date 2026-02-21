@@ -39,6 +39,10 @@ final class SettingsManager {
         didSet { UserDefaults.standard.set(audioOnly, forKey: "audioOnly") }
     }
 
+    var pauseOtherAudioDuringSpeech: Bool {
+        didSet { UserDefaults.standard.set(pauseOtherAudioDuringSpeech, forKey: "pauseOtherAudioDuringSpeech") }
+    }
+
     var networkListenerEnabled: Bool {
         didSet { UserDefaults.standard.set(networkListenerEnabled, forKey: "networkListenerEnabled") }
     }
@@ -76,6 +80,11 @@ final class SettingsManager {
         self.openAIVoice = UserDefaults.standard.string(forKey: "openAIVoice") ?? "onyx"
         self.appleVoiceIdentifier = UserDefaults.standard.string(forKey: "appleVoiceIdentifier")
         self.audioOnly = UserDefaults.standard.bool(forKey: "audioOnly")
+        if UserDefaults.standard.object(forKey: "pauseOtherAudioDuringSpeech") == nil {
+            self.pauseOtherAudioDuringSpeech = true
+        } else {
+            self.pauseOtherAudioDuringSpeech = UserDefaults.standard.bool(forKey: "pauseOtherAudioDuringSpeech")
+        }
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         self.networkListenerEnabled = UserDefaults.standard.bool(forKey: "networkListenerEnabled")
         let storedPort = UserDefaults.standard.integer(forKey: "networkListenerPort")
