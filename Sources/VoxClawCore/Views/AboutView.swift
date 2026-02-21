@@ -31,8 +31,11 @@ struct AboutView: View {
 
             HStack(spacing: 20) {
                 Link("Website", destination: URL(string: "https://voxclaw.com/")!)
+                    .accessibilityIdentifier(AccessibilityID.About.websiteLink)
                 Link("GitHub", destination: URL(string: "https://github.com/malpern/VoxClaw")!)
+                    .accessibilityIdentifier(AccessibilityID.About.githubLink)
                 Link("Twitter", destination: URL(string: "https://www.x.com/malpern")!)
+                    .accessibilityIdentifier(AccessibilityID.About.twitterLink)
             }
             .font(.callout)
         }

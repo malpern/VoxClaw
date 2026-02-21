@@ -259,11 +259,14 @@ private struct NavBar: View {
                 if #available(macOS 26, *) {
                     Button("Back") { onBack() }
                         .buttonStyle(.glass)
+                        .accessibilityIdentifier(AccessibilityID.Onboarding.backButton)
                 } else {
                     Button("Back") { onBack() }
+                        .accessibilityIdentifier(AccessibilityID.Onboarding.backButton)
                 }
 #else
                 Button("Back") { onBack() }
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.backButton)
 #endif
             }
 
@@ -281,18 +284,22 @@ private struct NavBar: View {
                 .foregroundStyle(Color.accentColor)
                 .help(isPaused ? "Resume" : "Pause")
                 .accessibilityLabel(isPaused ? "Resume" : "Pause")
+                .accessibilityIdentifier(AccessibilityID.Onboarding.pauseButton)
                 .padding(.trailing, 8)
             }
 
             if isFirstStep {
                 prominentActionButton(title: "Get Started", action: onNext)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.getStartedButton)
             } else if step == .done {
                 prominentActionButton(
                     title: isRemoteDoneStep ? "Copy Setup & Finish" : "Done",
                     action: onDone
                 )
+                .accessibilityIdentifier(AccessibilityID.Onboarding.finishButton)
             } else {
                 prominentActionButton(title: "Continue", action: onNext)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.continueButton)
             }
         }
         .padding(.top, 12)
@@ -413,21 +420,25 @@ private struct APIKeyStep: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.red)
+                        .accessibilityIdentifier(AccessibilityID.Onboarding.removeAPIKey)
                     }
                 } else {
                     HStack {
                         SecureField("sk-...", text: $apiKey)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityIdentifier(AccessibilityID.Onboarding.apiKeyField)
                         Button("Paste") {
                             if let clip = NSPasteboard.general.string(forType: .string) {
                                 apiKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
                             }
                         }
+                        .accessibilityIdentifier(AccessibilityID.Onboarding.pasteAPIKey)
                     }
 
                     HStack(spacing: 4) {
                         Link("Get an API key",
                              destination: URL(string: "https://platform.openai.com/api-keys")!)
+                            .accessibilityIdentifier(AccessibilityID.Onboarding.getAPIKeyLink)
                             .font(.caption)
                         Text("— optional, you can always add it later in Settings")
                             .font(.caption)
@@ -484,6 +495,7 @@ private struct AgentLocationStep: View {
                     location = .thisMac
                     networkEnabled = false
                 }
+                .accessibilityIdentifier(AccessibilityID.Onboarding.thisMacButton)
 
                 locationRow(
                     icon: "network",
@@ -494,17 +506,22 @@ private struct AgentLocationStep: View {
                     location = .remoteMachine
                     networkEnabled = true
                 }
+                .accessibilityIdentifier(AccessibilityID.Onboarding.remoteMachineButton)
             }
 
             HStack {
                 Toggle("Launch at Login", isOn: $launchAtLogin)
+                    .accessibilityIdentifier(AccessibilityID.Onboarding.launchAtLoginToggle)
                 Spacer()
             }
         }
         .alert("Network Listener Port", isPresented: $isEditingPort) {
             TextField("Port", text: $port)
+                .accessibilityIdentifier(AccessibilityID.Onboarding.portField)
             Button("OK") {}
+                .accessibilityIdentifier(AccessibilityID.Onboarding.portOKButton)
             Button("Cancel", role: .cancel) {}
+                .accessibilityIdentifier(AccessibilityID.Onboarding.portCancelButton)
         } message: {
             Text("Enter the port VoxClaw should listen on.")
         }

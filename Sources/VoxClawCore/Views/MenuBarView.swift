@@ -3,13 +3,13 @@ import os
 import SwiftUI
 
 struct MenuBarView: View {
+    @Environment(\.openWindow) private var openWindow
+
     let appState: AppState
     let settings: SettingsManager
     var onTogglePause: () -> Void = {}
     var onStop: () -> Void = {}
     var onReadText: (String) async -> Void = { _ in }
-
-    @Environment(\.openWindow) private var openWindow
 
     private var clipboardPreview: String? {
         guard let text = NSPasteboard.general.string(forType: .string),
@@ -31,11 +31,13 @@ struct MenuBarView: View {
                     onTogglePause()
                 }
                 .keyboardShortcut(" ", modifiers: [])
+                .accessibilityIdentifier(AccessibilityID.MenuBar.pauseResume)
 
                 Button("Stop") {
                     onStop()
                 }
                 .keyboardShortcut(.escape, modifiers: [])
+                .accessibilityIdentifier(AccessibilityID.MenuBar.stop)
 
                 Divider()
             }
@@ -57,6 +59,7 @@ struct MenuBarView: View {
                     }
                 }
                 .keyboardShortcut("v", modifiers: [.command, .shift])
+                .accessibilityIdentifier(AccessibilityID.MenuBar.readClipboard)
             } else {
                 Label {
                     Text("Read Clipboard")
@@ -71,6 +74,7 @@ struct MenuBarView: View {
             } label: {
                 Label("Read from File...", systemImage: "doc")
             }
+            .accessibilityIdentifier(AccessibilityID.MenuBar.readFromFile)
 
             Divider()
 
@@ -79,6 +83,7 @@ struct MenuBarView: View {
                 openWindow(id: "settings")
             }
             .keyboardShortcut(",", modifiers: .command)
+            .accessibilityIdentifier(AccessibilityID.MenuBar.settings)
 
             if appState.isListening {
                 if let ip = NetworkListener.localIPAddress() {
@@ -103,6 +108,7 @@ struct MenuBarView: View {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "about")
             }
+            .accessibilityIdentifier(AccessibilityID.MenuBar.about)
 
             Divider()
 
@@ -110,6 +116,7 @@ struct MenuBarView: View {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: .command)
+            .accessibilityIdentifier(AccessibilityID.MenuBar.quit)
         }
     }
 

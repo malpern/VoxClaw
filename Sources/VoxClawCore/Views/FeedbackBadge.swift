@@ -11,6 +11,7 @@ struct FeedbackBadge: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .glassEffect(.regular, in: .capsule)
+                .accessibilityIdentifier(AccessibilityID.Overlay.feedbackBadge)
                 .transition(.scale.combined(with: .opacity))
         }
     }

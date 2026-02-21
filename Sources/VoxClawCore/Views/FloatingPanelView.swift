@@ -2,27 +2,30 @@ import SwiftUI
 
 struct FloatingPanelView: View {
     let appState: AppState
+    let appearance: OverlayAppearance
     var onTogglePause: () -> Void = {}
+    var onOpenSettings: (() -> Void)?
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.black.opacity(0.85))
+            RoundedRectangle(cornerRadius: appearance.cornerRadius)
+                .fill(appearance.backgroundColor.color)
 
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
-                    FlowLayout(spacing: 6) {
+                    FlowLayout(hSpacing: appearance.wordSpacing, vSpacing: appearance.lineSpacing) {
                         ForEach(appState.words.indices, id: \.self) { index in
                             WordView(
                                 word: appState.words[index],
                                 isHighlighted: index == appState.currentWordIndex,
-                                isPast: index < appState.currentWordIndex
+                                isPast: index < appState.currentWordIndex,
+                                appearance: appearance
                             )
                             .id(index)
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, appearance.horizontalPadding)
+                    .padding(.vertical, appearance.verticalPadding)
                 }
                 .onChange(of: appState.currentWordIndex) { _, newIndex in
                     withAnimation(.easeOut(duration: 0.15)) {
@@ -39,23 +42,41 @@ struct FloatingPanelView: View {
                     .padding(.bottom, 12)
             }
 
-            VStack {
+            overlayControls
+        }
+        .accessibilityIdentifier(AccessibilityID.Overlay.panel)
+    }
+
+    private var overlayControls: some View {
+        VStack {
+            Spacer()
+            HStack {
                 Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: onTogglePause) {
-                        Image(systemName: appState.isPaused ? "play.fill" : "pause.fill")
+                if let onOpenSettings {
+                    Button(action: onOpenSettings) {
+                        Image(systemName: "gearshape.fill")
                             .font(.system(.caption, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .glassEffect(.regular.interactive(), in: .circle)
                     }
                     .buttonStyle(.plain)
-                    .help(appState.isPaused ? "Resume" : "Pause")
+                    .help("Overlay Settings")
+                    .accessibilityIdentifier(AccessibilityID.Overlay.settingsButton)
                 }
-                .padding(.trailing, 12)
-                .padding(.bottom, 10)
+                Button(action: onTogglePause) {
+                    Image(systemName: appState.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(.caption, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .glassEffect(.regular.interactive(), in: .circle)
+                }
+                .buttonStyle(.plain)
+                .help(appState.isPaused ? "Resume" : "Pause")
+                .accessibilityIdentifier(AccessibilityID.Overlay.pauseButton)
             }
+            .padding(.trailing, 12)
+            .padding(.bottom, 10)
         }
     }
 }
@@ -64,10 +85,11 @@ private struct WordView: View {
     let word: String
     let isHighlighted: Bool
     let isPast: Bool
+    let appearance: OverlayAppearance
 
     var body: some View {
         Text(word)
-            .font(.custom("Helvetica Neue", size: 28).weight(.medium))
+            .font(.custom(appearance.fontFamily, size: appearance.fontSize).weight(appearance.fontWeightValue))
             .foregroundStyle(textColor)
             .padding(.horizontal, isHighlighted ? 4 : 0)
             .padding(.vertical, isHighlighted ? 2 : 0)
@@ -75,7 +97,7 @@ private struct WordView: View {
                 Group {
                     if isHighlighted {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(.yellow.opacity(0.35))
+                            .fill(appearance.highlightColor.color)
                     }
                 }
             )
@@ -83,11 +105,11 @@ private struct WordView: View {
 
     private var textColor: Color {
         if isHighlighted {
-            return .white
+            return appearance.textColor.color
         } else if isPast {
-            return .white.opacity(0.5)
+            return appearance.textColor.color.opacity(appearance.pastWordOpacity)
         } else {
-            return .white.opacity(0.9)
+            return appearance.textColor.color.opacity(appearance.futureWordOpacity)
         }
     }
 }

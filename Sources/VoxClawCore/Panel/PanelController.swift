@@ -6,10 +6,13 @@ import SwiftUI
 final class PanelController {
     private var panel: FloatingPanel?
     private let appState: AppState
+    private let settings: SettingsManager
     private let onTogglePause: () -> Void
+    private var quickSettingsWindow: NSWindow?
 
-    init(appState: AppState, onTogglePause: @escaping () -> Void) {
+    init(appState: AppState, settings: SettingsManager, onTogglePause: @escaping () -> Void) {
         self.appState = appState
+        self.settings = settings
         self.onTogglePause = onTogglePause
     }
 
@@ -19,10 +22,11 @@ final class PanelController {
             return
         }
 
+        let appearance = settings.overlayAppearance
         let screenFrame = screen.visibleFrame
-        let panelWidth = screenFrame.width / 3
-        let panelHeight: CGFloat = 162
-        let cornerRadius: CGFloat = 20
+        let panelWidth = screenFrame.width * appearance.panelWidthFraction
+        let panelHeight = appearance.panelHeight
+        let cornerRadius = appearance.cornerRadius
         let topPadding: CGFloat = 8
 
         let panelX = screenFrame.midX - panelWidth / 2
@@ -32,9 +36,16 @@ final class PanelController {
         let panel = FloatingPanel(contentRect: contentRect)
 
         let hostingView = NSHostingView(rootView:
-            FloatingPanelView(appState: appState, onTogglePause: onTogglePause)
-                .frame(width: panelWidth, height: panelHeight)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            FloatingPanelView(
+                appState: appState,
+                appearance: appearance,
+                onTogglePause: onTogglePause,
+                onOpenSettings: { [weak self] in
+                    self?.showQuickSettings()
+                }
+            )
+            .frame(width: panelWidth, height: panelHeight)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         )
         panel.contentView = hostingView
 
@@ -58,6 +69,8 @@ final class PanelController {
 
     func dismiss() {
         Log.panel.info("Panel dismissed")
+        quickSettingsWindow?.close()
+        quickSettingsWindow = nil
         guard let panel else { return }
 
         let frame = panel.frame
@@ -74,5 +87,37 @@ final class PanelController {
                 self?.panel = nil
             }
         })
+    }
+
+    private func showQuickSettings() {
+        if let existing = quickSettingsWindow {
+            existing.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let settingsView = OverlayQuickSettings(settings: settings)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 340),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Quick Settings"
+        window.contentView = NSHostingView(rootView: settingsView)
+        window.level = .floating
+        window.isReleasedWhenClosed = false
+
+        // Position near the panel
+        if let panel {
+            let panelFrame = panel.frame
+            let x = panelFrame.maxX + 8
+            let y = panelFrame.midY - 170
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        } else {
+            window.center()
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        quickSettingsWindow = window
     }
 }

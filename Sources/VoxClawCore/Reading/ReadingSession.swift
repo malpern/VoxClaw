@@ -5,6 +5,7 @@ import os
 final class ReadingSession: SpeechEngineDelegate {
     private let appState: AppState
     private let engine: any SpeechEngine
+    private let settings: SettingsManager?
     private let pauseExternalAudioDuringSpeech: Bool
     private let playbackController: any ExternalPlaybackControlling
     private var panelController: PanelController?
@@ -15,11 +16,13 @@ final class ReadingSession: SpeechEngineDelegate {
     init(
         appState: AppState,
         engine: any SpeechEngine,
+        settings: SettingsManager? = nil,
         pauseExternalAudioDuringSpeech: Bool = false,
         playbackController: any ExternalPlaybackControlling = ExternalPlaybackController()
     ) {
         self.appState = appState
         self.engine = engine
+        self.settings = settings
         self.pauseExternalAudioDuringSpeech = pauseExternalAudioDuringSpeech
         self.playbackController = playbackController
         engine.delegate = self
@@ -40,7 +43,8 @@ final class ReadingSession: SpeechEngineDelegate {
 
         // Show panel unless audio-only
         if !appState.audioOnly {
-            panelController = PanelController(appState: appState, onTogglePause: { [weak self] in
+            let effectiveSettings = settings ?? SettingsManager()
+            panelController = PanelController(appState: appState, settings: effectiveSettings, onTogglePause: { [weak self] in
                 self?.togglePause()
             })
             panelController?.show()

@@ -291,6 +291,7 @@ final class AppCoordinator {
         let session = ReadingSession(
             appState: appState,
             engine: engine,
+            settings: settings,
             pauseExternalAudioDuringSpeech: settings.pauseOtherAudioDuringSpeech
         )
         activeSession = session

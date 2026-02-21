@@ -55,6 +55,14 @@ final class SettingsManager {
         didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
     }
 
+    var overlayAppearance: OverlayAppearance {
+        didSet {
+            if let data = try? JSONEncoder().encode(overlayAppearance) {
+                UserDefaults.standard.set(data, forKey: "overlayAppearance")
+            }
+        }
+    }
+
     var launchAtLogin: Bool {
         didSet {
             do {
@@ -92,6 +100,13 @@ final class SettingsManager {
         let storedPort = UserDefaults.standard.integer(forKey: "networkListenerPort")
         self.networkListenerPort = storedPort > 0 ? UInt16(storedPort) : 4140
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
+
+        if let data = UserDefaults.standard.data(forKey: "overlayAppearance"),
+           let decoded = try? JSONDecoder().decode(OverlayAppearance.self, from: data) {
+            self.overlayAppearance = decoded
+        } else {
+            self.overlayAppearance = OverlayAppearance()
+        }
     }
 
     func createEngine() -> any SpeechEngine {

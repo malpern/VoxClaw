@@ -9,13 +9,16 @@ struct SettingsView: View {
     @State private var showInstructions = false
 
     var body: some View {
-        Form {
-            agentSetupSection
-            voiceSection
-            controlsSection
-            readOnlyDataSection
+        ScrollView {
+            Form {
+                agentSetupSection
+                voiceSection
+                overlayAppearanceSection
+                controlsSection
+                readOnlyDataSection
+            }
+            .formStyle(.grouped)
         }
-        .formStyle(.grouped)
         .frame(width: 520, height: 720)
     }
 
@@ -45,6 +48,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(websiteRed)
+                    .accessibilityIdentifier(AccessibilityID.Settings.copyAgentSetup)
 
                     Button(showInstructions ? "hide instructions" : "show instructions") {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -54,6 +58,7 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                     .underline()
+                    .accessibilityIdentifier(AccessibilityID.Settings.showInstructions)
                 }
 
                 if copiedAgentHandoff {
@@ -85,6 +90,7 @@ struct SettingsView: View {
                 Text("OpenAI").tag(VoiceEngineType.openai)
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier(AccessibilityID.Settings.voiceEnginePicker)
 
             if settings.voiceEngine == .apple {
                 Picker("Apple Voice", selection: appleVoiceBinding) {
@@ -94,12 +100,14 @@ struct SettingsView: View {
                             .tag(voice.identifier)
                     }
                 }
+                .accessibilityIdentifier(AccessibilityID.Settings.appleVoicePicker)
             } else {
                 Picker("OpenAI Voice", selection: $settings.openAIVoice) {
                     ForEach(openAIVoices, id: \.self) { voice in
                         Text(voice.capitalized).tag(voice)
                     }
                 }
+                .accessibilityIdentifier(AccessibilityID.Settings.openAIVoicePicker)
 
                 DisclosureGroup("OpenAI Setup", isExpanded: $showOpenAISetup) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -116,20 +124,24 @@ struct SettingsView: View {
                         HStack {
                             SecureField("sk-...", text: $settings.openAIAPIKey)
                                 .textFieldStyle(.roundedBorder)
+                                .accessibilityIdentifier(AccessibilityID.Settings.apiKeyField)
 
                             Button("Paste") {
                                 if let clip = NSPasteboard.general.string(forType: .string) {
                                     settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
                                 }
                             }
+                            .accessibilityIdentifier(AccessibilityID.Settings.pasteAPIKey)
                         }
 
                         HStack(spacing: 12) {
                             Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                                .accessibilityIdentifier(AccessibilityID.Settings.getAPIKeyLink)
                             if settings.isOpenAIConfigured {
                                 Button("Remove Key", role: .destructive) {
                                     settings.openAIAPIKey = ""
                                 }
+                                .accessibilityIdentifier(AccessibilityID.Settings.removeAPIKey)
                             }
                         }
 
@@ -143,12 +155,22 @@ struct SettingsView: View {
         }
     }
 
+    private var overlayAppearanceSection: some View {
+        Section("Overlay Appearance") {
+            OverlayAppearanceSettingsView(settings: settings)
+        }
+    }
+
     private var controlsSection: some View {
         Section("Controls") {
             Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
+                .accessibilityIdentifier(AccessibilityID.Settings.networkListenerToggle)
             Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
+                .accessibilityIdentifier(AccessibilityID.Settings.pauseOtherAudioToggle)
             Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
+                .accessibilityIdentifier(AccessibilityID.Settings.audioOnlyToggle)
             Toggle("Launch at Login", isOn: $settings.launchAtLogin)
+                .accessibilityIdentifier(AccessibilityID.Settings.launchAtLoginToggle)
         }
     }
 
