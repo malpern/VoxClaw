@@ -59,12 +59,7 @@ final class OpenAISpeechEngine: SpeechEngine {
                 }
             }
         } catch {
-            if let ttsError = error as? TTSService.TTSError, ttsError.statusCode == 401 {
-                NotificationCenter.default.post(name: .voxClawOpenAIAuthFailed, object: nil)
-            }
-            Log.tts.error("OpenAI engine error: \(error)")
-            state = .error(error.localizedDescription)
-            delegate?.speechEngine(self, didEncounterError: error)
+            handleEngineError(error)
         }
     }
 
@@ -116,5 +111,18 @@ final class OpenAISpeechEngine: SpeechEngine {
         stopDisplayLink()
         state = .finished
         delegate?.speechEngineDidFinish(self)
+    }
+
+    func handleEngineError(_ error: Error) {
+        if let ttsError = error as? TTSService.TTSError, ttsError.statusCode == 401 {
+            NotificationCenter.default.post(
+                name: .voxClawOpenAIAuthFailed,
+                object: nil,
+                userInfo: [VoxClawNotificationUserInfo.openAIAuthErrorMessage: ttsError.message]
+            )
+        }
+        Log.tts.error("OpenAI engine error: \(error)")
+        state = .error(error.localizedDescription)
+        delegate?.speechEngine(self, didEncounterError: error)
     }
 }

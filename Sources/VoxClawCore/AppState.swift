@@ -5,6 +5,10 @@ extension Notification.Name {
     static let voxClawOpenAIAuthFailed = Notification.Name("voxclaw.openaiAuthFailed")
 }
 
+enum VoxClawNotificationUserInfo {
+    static let openAIAuthErrorMessage = "openaiAuthErrorMessage"
+}
+
 enum SessionState: Sendable {
     case idle
     case loading

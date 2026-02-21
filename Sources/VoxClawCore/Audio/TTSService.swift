@@ -40,10 +40,7 @@ actor TTSService {
                             if errorBody.count > 1000 { break } // Don't accumulate huge error bodies
                         }
                         Log.tts.error("TTS API error: status=\(httpResponse.statusCode, privacy: .public)")
-                        throw TTSError(
-                            message: Self.friendlyError(status: httpResponse.statusCode, body: errorBody),
-                            statusCode: httpResponse.statusCode
-                        )
+                        throw Self.httpError(status: httpResponse.statusCode, body: errorBody)
                     }
 
                     // Stream in chunks of 4800 bytes (~100ms of 24kHz 16-bit mono)
@@ -95,6 +92,10 @@ actor TTSService {
         default:
             return "OpenAI TTS error (HTTP \(status)): \(body.prefix(200))"
         }
+    }
+
+    static func httpError(status: Int, body: String) -> TTSError {
+        TTSError(message: friendlyError(status: status, body: body), statusCode: status)
     }
 
     private func buildRequest(text: String) throws -> URLRequest {

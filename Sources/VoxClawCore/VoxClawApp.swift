@@ -43,9 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: .voxClawOpenAIAuthFailed,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
+            let message = note.userInfo?[VoxClawNotificationUserInfo.openAIAuthErrorMessage] as? String
             Task { @MainActor [weak self] in
-                self?.showOpenAIAuthAlert()
+                self?.showOpenAIAuthAlert(errorMessage: message)
             }
         }
 
@@ -76,19 +77,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.onboarding.info("Onboarding window shown")
     }
 
-    private func showOpenAIAuthAlert() {
+    private func showOpenAIAuthAlert(errorMessage: String?) {
         guard !hasShownOpenAIAuthAlert else { return }
         hasShownOpenAIAuthAlert = true
 
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "OpenAI key failed"
-        alert.informativeText = "VoxClaw couldn't use your OpenAI key and switched to Apple voice. Open Settings to re-enter your key."
+        alert.messageText = "OpenAI key rejected (HTTP 401)"
+        alert.informativeText = """
+        OpenAI rejected your API key, so VoxClaw switched to Apple voice for this read.
+
+        \(errorMessage ?? "Generate a new key in OpenAI, then paste it in VoxClaw Settings.")
+        """
+        alert.addButton(withTitle: "Get New Key")
         alert.addButton(withTitle: "Open Settings")
         alert.addButton(withTitle: "OK")
 
-        if alert.runModal() == .alertFirstButtonReturn {
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: "https://platform.openai.com/api-keys") {
+                NSWorkspace.shared.open(url)
+            }
+            presentSettingsWindow()
+        } else if response == .alertSecondButtonReturn {
             presentSettingsWindow()
         }
     }
