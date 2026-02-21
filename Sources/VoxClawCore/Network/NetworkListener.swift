@@ -98,7 +98,8 @@ final class NetworkListener {
                         state: sessionState,
                         wordCount: state.words.count,
                         port: self.port,
-                        lanIP: Self.localIPAddress()
+                        lanIP: Self.localIPAddress(),
+                        autoClosedInstancesOnLaunch: state.autoClosedInstancesOnLaunch
                     )
                 }
             },

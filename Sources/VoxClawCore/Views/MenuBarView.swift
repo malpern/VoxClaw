@@ -92,6 +92,13 @@ struct MenuBarView: View {
                 }
             }
 
+            if appState.autoClosedInstancesOnLaunch > 0 {
+                let count = appState.autoClosedInstancesOnLaunch
+                Text("Closed \(count) older instance\(count == 1 ? "" : "s") on launch")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Button("About VoxClaw") {
                 NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "about")

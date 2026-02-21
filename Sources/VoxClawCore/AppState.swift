@@ -28,6 +28,7 @@ final class AppState {
     var isListening: Bool = false
     var feedbackText: String? = nil
     var inputText: String = ""
+    var autoClosedInstancesOnLaunch: Int = 0
 
     var isActive: Bool {
         switch sessionState {

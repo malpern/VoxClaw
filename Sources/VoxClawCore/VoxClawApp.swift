@@ -18,25 +18,29 @@ public struct VoxClawLauncher {
             Log.app.info("entering CLI mode")
             CLIParser.main()
         case .menuBar:
-            terminateOtherMenuBarInstances(currentPID: currentPID)
+            let terminated = terminateOtherMenuBarInstances(currentPID: currentPID)
+            SharedApp.appState.autoClosedInstancesOnLaunch = terminated
             Log.app.info("entering menuBar mode")
             VoxClawApp.main()
         }
     }
 
     @MainActor
-    private static func terminateOtherMenuBarInstances(currentPID: Int32) {
+    private static func terminateOtherMenuBarInstances(currentPID: Int32) -> Int {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.malpern.voxclaw"
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        var terminatedCount = 0
 
         for app in running where app.processIdentifier != currentPID {
             let terminated = app.terminate() || app.forceTerminate()
             if terminated {
                 Log.app.warning("Terminated older VoxClaw instance pid=\(app.processIdentifier, privacy: .public)")
+                terminatedCount += 1
             } else {
                 Log.app.error("Failed to terminate older VoxClaw instance pid=\(app.processIdentifier, privacy: .public)")
             }
         }
+        return terminatedCount
     }
 }
 

@@ -32,6 +32,7 @@ struct NetworkListenerIntegrationTests {
         // Canonical endpoint fields should always be present for agents
         #expect(body.contains("\"speak_url\""))
         #expect(body.contains("\"health_url\""))
+        #expect(body.contains("\"auto_closed_instances_on_launch\""))
         // Agent guidance should not auto-route to .local hostnames
         #expect(!body.contains(".local"))
     }

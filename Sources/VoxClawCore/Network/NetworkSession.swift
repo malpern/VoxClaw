@@ -17,11 +17,11 @@ final class NetworkSession: Sendable {
 
     private let connection: NWConnection
     private let onReadRequest: @Sendable (ReadRequest) async -> Void
-    private let statusProvider: @Sendable () -> (reading: Bool, state: String, wordCount: Int, port: UInt16, lanIP: String?)
+    private let statusProvider: @Sendable () -> (reading: Bool, state: String, wordCount: Int, port: UInt16, lanIP: String?, autoClosedInstancesOnLaunch: Int)
 
     init(
         connection: NWConnection,
-        statusProvider: @escaping @Sendable () -> (reading: Bool, state: String, wordCount: Int, port: UInt16, lanIP: String?),
+        statusProvider: @escaping @Sendable () -> (reading: Bool, state: String, wordCount: Int, port: UInt16, lanIP: String?, autoClosedInstancesOnLaunch: Int),
         onReadRequest: @escaping @Sendable (ReadRequest) async -> Void
     ) {
         self.connection = connection
@@ -100,6 +100,7 @@ final class NetworkSession: Sendable {
             "discovery": "_voxclaw._tcp",
             "speak_url": "\(baseURL)/read",
             "health_url": "\(baseURL)/status",
+            "auto_closed_instances_on_launch": info.autoClosedInstancesOnLaunch,
             "agent_handoff": "🦞 Use speak_url and health_url from this payload exactly. Prefer numeric LAN IP endpoints unless a human explicitly provides a hostname."
         ]
 
