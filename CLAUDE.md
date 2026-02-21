@@ -66,8 +66,9 @@ voxclaw --status                     # Check if listener is running
 - Tests use Swift Testing framework (`@Test`, `#expect`)
 - Network integration tests are `@Suite(.serialized)` to avoid port conflicts
 - Logging via `os.Logger` categories in `Log.swift`
-- Keychain: `KeychainHelper` — checks `OPENAI_API_KEY` env var first, then system keychain
-  - Set key: `security add-generic-password -a "openai" -s "openai-voice-api-key" -w "sk-..."`
+- API key storage: `KeychainHelper` — checks `OPENAI_API_KEY` env var first, then `~/Library/Application Support/VoxClaw/api-key`
+  - File has `0600` permissions (owner read/write only)
+  - One-time migration from Keychain happens automatically on first launch after upgrade
 - `@Observable` on `AppState` and `SettingsManager` — use stored properties with `didSet`, not computed, because `@Observable` can't track computed properties
 
 ## Logging

@@ -3,12 +3,106 @@ import os
 import Security
 
 enum KeychainHelper {
+    /// Override for testing — set to a temp directory to isolate from real storage.
+    nonisolated(unsafe) static var storageDirectoryOverride: URL?
+
+    private static var storageDirectory: URL {
+        if let override = storageDirectoryOverride { return override }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("VoxClaw")
+    }
+
+    private static var apiKeyFileURL: URL {
+        storageDirectory.appendingPathComponent("api-key")
+    }
+
+    enum KeychainError: Error, CustomStringConvertible {
+        case notFound
+        case unexpectedData
+        case fileError(Error)
+
+        var description: String {
+            switch self {
+            case .notFound:
+                return "API key not found. Set it in VoxClaw Settings or via the OPENAI_API_KEY environment variable."
+            case .unexpectedData:
+                return "Unexpected data format in stored API key"
+            case .fileError(let error):
+                return "File storage error: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Reads API key, checking the `OPENAI_API_KEY` env var first, then file storage.
+    static func readAPIKey() throws -> String {
+        if let envKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
+            .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }),
+           !envKey.isEmpty {
+            Log.keychain.info("API key sourced from OPENAI_API_KEY env var")
+            return envKey
+        }
+        return try readPersistedAPIKey()
+    }
+
+    /// Reads API key from file storage, migrating from Keychain on first access if needed.
+    static func readPersistedAPIKey() throws -> String {
+        // 1. Try file storage first
+        if let key = readFromFile() {
+            return key
+        }
+
+        // 2. One-time migration from Keychain (skip when storageDirectoryOverride is set, i.e. tests)
+        if storageDirectoryOverride == nil, let key = migrateFromKeychain() {
+            return key
+        }
+
+        throw KeychainError.notFound
+    }
+
+    static func saveAPIKey(_ key: String) throws {
+        let dir = storageDirectory
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let fileURL = apiKeyFileURL
+        try key.write(to: fileURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: fileURL.path
+        )
+        Log.keychain.info("API key saved to file storage")
+    }
+
+    static func deleteAPIKey() throws {
+        let fileURL = apiKeyFileURL
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+            Log.keychain.info("API key deleted from file storage")
+        }
+    }
+
+    // MARK: - File Storage
+
+    private static func readFromFile() -> String? {
+        let fileURL = apiKeyFileURL
+        guard let data = FileManager.default.contents(atPath: fileURL.path),
+              let raw = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return nil }
+        Log.keychain.info("API key sourced from file storage")
+        return key
+    }
+
+    // MARK: - One-Time Keychain Migration
+
     private static let defaultService = "openai-voice-api-key"
     private static let defaultAccount = "openai"
+
     private struct LegacyKeychainCandidate {
         let service: String
         let preferredAccounts: [String]
     }
+
     private static let legacyServiceCandidates: [LegacyKeychainCandidate] = [
         LegacyKeychainCandidate(
             service: "openclaw.OPENAI_API_KEY",
@@ -20,78 +114,64 @@ enum KeychainHelper {
         ),
     ]
 
-    enum KeychainError: Error, CustomStringConvertible {
-        case notFound
-        case unexpectedData
-        case osError(OSStatus)
+    /// Attempts to read from Keychain (default + legacy locations) and migrate to file storage.
+    private static func migrateFromKeychain() -> String? {
+        // Try default VoxClaw keychain entry
+        if let key = try? readFromKeychain(service: defaultService, account: defaultAccount) {
+            try? saveAPIKey(key)
+            Log.keychain.info("Migrated API key from Keychain to file storage")
+            return key
+        }
 
-        var description: String {
-            switch self {
-            case .notFound:
-                return "API key not found in Keychain. Add it with:\n  security add-generic-password -a \"openai\" -s \"openai-voice-api-key\" -w \"sk-...\""
-            case .unexpectedData:
-                return "Unexpected data format in Keychain entry"
-            case .osError(let status):
-                return "Keychain error: \(status)"
+        // Try legacy service names
+        for candidate in legacyServiceCandidates {
+            for account in candidate.preferredAccounts {
+                if let key = try? readFromKeychain(service: candidate.service, account: account),
+                   let normalized = normalizedIfLikelyOpenAIKey(key) {
+                    try? saveAPIKey(normalized)
+                    Log.keychain.info("Migrated API key from legacy Keychain service \(candidate.service, privacy: .public)")
+                    return normalized
+                }
+            }
+
+            let allKeys = (try? readAllFromKeychain(service: candidate.service)) ?? []
+            if let key = uniqueMigrationKey(from: allKeys) {
+                try? saveAPIKey(key)
+                Log.keychain.info("Migrated unique API key from legacy Keychain service: \(candidate.service, privacy: .public)")
+                return key
             }
         }
+
+        return nil
     }
 
-    /// Reads API key, checking the `OPENAI_API_KEY` env var first, then keychain.
-    static func readAPIKey() throws -> String {
-        // First check environment variable
-        if let envKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"].map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }), !envKey.isEmpty {
-            Log.keychain.info("API key sourced from OPENAI_API_KEY env var")
-            return envKey
-        }
-
-        return try readFromKeychain()
-    }
-
-    /// Reads API key directly from the keychain, bypassing the env var check.
-    static func readFromKeychain(service: String = defaultService, account: String = defaultAccount) throws -> String {
-        try readFromKeychain(service: service, account: Optional(account))
-    }
-
-    /// Reads API key directly from keychain with optional account filtering.
-    static func readFromKeychain(service: String, account: String?) throws -> String {
+    private static func readFromKeychain(service: String, account: String) throws -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
-        var queryWithAccount = query
-        if let account {
-            queryWithAccount[kSecAttrAccount as String] = account
-        }
 
         var result: AnyObject?
-        let status = SecItemCopyMatching(queryWithAccount as CFDictionary, &result)
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         switch status {
         case errSecSuccess:
             guard let data = result as? Data,
                   let raw = String(data: data, encoding: .utf8) else {
-                Log.keychain.error("Keychain returned unexpected data format")
                 throw KeychainError.unexpectedData
             }
             let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !key.isEmpty else {
-                throw KeychainError.unexpectedData
-            }
-            Log.keychain.info("API key sourced from Keychain")
+            guard !key.isEmpty else { throw KeychainError.unexpectedData }
             return key
-        case errSecItemNotFound:
-            Log.keychain.error("API key not found in Keychain")
-            throw KeychainError.notFound
         default:
-            Log.keychain.error("Keychain error: status=\(status, privacy: .public)")
-            throw KeychainError.osError(status)
+            throw KeychainError.notFound
         }
     }
 
-    static func readAllFromKeychain(service: String) throws -> [String] {
+    private static func readAllFromKeychain(service: String) throws -> [String] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -116,12 +196,12 @@ enum KeychainHelper {
                 guard let raw = String(data: data, encoding: .utf8) else { return nil }
                 return normalizedIfLikelyOpenAIKey(raw)
             }
-        case errSecItemNotFound:
-            return []
         default:
-            throw KeychainError.osError(status)
+            return []
         }
     }
+
+    // MARK: - Helpers
 
     static func normalizedIfLikelyOpenAIKey(_ raw: String) -> String? {
         let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -134,75 +214,5 @@ enum KeychainHelper {
         let unique = Set(normalized)
         guard unique.count == 1 else { return nil }
         return unique.first
-    }
-
-    /// Reads API key from the default location, falling back to legacy service names.
-    /// If a legacy entry is found, it is migrated into the default VoxClaw keychain item.
-    static func readPersistedAPIKey() throws -> String {
-        if let key = try? readFromKeychain() {
-            return key
-        }
-
-        for candidate in legacyServiceCandidates {
-            for account in candidate.preferredAccounts {
-                if let key = try? readFromKeychain(service: candidate.service, account: account),
-                   let normalized = normalizedIfLikelyOpenAIKey(key) {
-                    try? saveAPIKey(normalized)
-                    Log.keychain.info("Migrated API key from legacy keychain service \(candidate.service, privacy: .public) with account \(account, privacy: .public)")
-                    return normalized
-                }
-            }
-
-            let allKeys = (try? readAllFromKeychain(service: candidate.service)) ?? []
-            if let key = uniqueMigrationKey(from: allKeys) {
-                try? saveAPIKey(key)
-                Log.keychain.info("Migrated unique API key from legacy keychain service: \(candidate.service, privacy: .public)")
-                return key
-            }
-            if Set(allKeys).count > 1 {
-                Log.keychain.warning("Skipped legacy key migration for \(candidate.service, privacy: .public): multiple candidate keys found")
-            }
-        }
-
-        throw KeychainError.notFound
-    }
-
-    static func saveAPIKey(_ key: String, service: String = defaultService, account: String = defaultAccount) throws {
-        guard let data = key.data(using: .utf8) else { return }
-
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: account,
-            kSecAttrService as String: service,
-            kSecValueData as String: data,
-        ]
-        var status = SecItemAdd(addQuery as CFDictionary, nil)
-
-        if status == errSecDuplicateItem {
-            // Entry already exists — update it in place
-            let searchQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: account,
-                kSecAttrService as String: service,
-            ]
-            status = SecItemUpdate(searchQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        }
-
-        guard status == errSecSuccess else {
-            throw KeychainError.osError(status)
-        }
-        Log.keychain.info("API key saved to keychain")
-    }
-
-    static func deleteAPIKey(service: String = defaultService, account: String = defaultAccount) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: account,
-            kSecAttrService as String: service,
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.osError(status)
-        }
     }
 }

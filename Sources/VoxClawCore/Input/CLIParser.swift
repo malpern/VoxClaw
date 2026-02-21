@@ -140,7 +140,7 @@ struct CLIParser: ParsableCommand {
     private func saveAudioToFile(_ text: String, outputPath: String) {
         guard let apiKey = try? KeychainHelper.readAPIKey() else {
             print("Error: --output requires an OpenAI API key.")
-            print("  Run: security add-generic-password -a openai -s openai-voice-api-key -w sk-...")
+            print("  Set it in VoxClaw Settings or via the OPENAI_API_KEY environment variable.")
             Foundation.exit(1)
         }
 

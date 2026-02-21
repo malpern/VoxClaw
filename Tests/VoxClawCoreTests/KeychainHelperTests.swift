@@ -4,42 +4,72 @@ import Testing
 
 @Suite(.serialized)
 struct KeychainHelperTests {
-    // Isolated service name so tests never touch the real keychain entry
-    private let service = "voxclaw-test-keychain"
-    private let account = "test"
+    /// Each test uses an isolated temp directory via storageDirectoryOverride.
+    private let testDir: URL
+
+    init() {
+        testDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voxclaw-test-\(UUID().uuidString)")
+        KeychainHelper.storageDirectoryOverride = testDir
+    }
+
+    private func cleanup() {
+        try? FileManager.default.removeItem(at: testDir)
+        KeychainHelper.storageDirectoryOverride = nil
+    }
 
     /// Save a key, read it back, verify it matches.
     @Test func saveAndReadRoundTrip() throws {
-        defer { try? KeychainHelper.deleteAPIKey(service: service, account: account) }
+        defer { cleanup() }
 
         let testKey = "sk-test-roundtrip-\(UUID().uuidString)"
-        try KeychainHelper.saveAPIKey(testKey, service: service, account: account)
+        try KeychainHelper.saveAPIKey(testKey)
 
-        let readBack = try KeychainHelper.readFromKeychain(service: service, account: account)
+        let readBack = try KeychainHelper.readPersistedAPIKey()
         #expect(readBack == testKey)
     }
 
     /// Saving a second key overwrites the first.
     @Test func saveOverwritesPreviousKey() throws {
-        defer { try? KeychainHelper.deleteAPIKey(service: service, account: account) }
+        defer { cleanup() }
 
-        try KeychainHelper.saveAPIKey("sk-first", service: service, account: account)
-        try KeychainHelper.saveAPIKey("sk-second", service: service, account: account)
+        try KeychainHelper.saveAPIKey("sk-first-key-value-placeholder")
+        try KeychainHelper.saveAPIKey("sk-second-key-value-placeholder")
 
-        let readBack = try KeychainHelper.readFromKeychain(service: service, account: account)
-        #expect(readBack == "sk-second")
+        let readBack = try KeychainHelper.readPersistedAPIKey()
+        #expect(readBack == "sk-second-key-value-placeholder")
     }
 
     /// Deleting removes the key so the next read throws.
     @Test func deleteRemovesKey() throws {
-        defer { try? KeychainHelper.deleteAPIKey(service: service, account: account) }
+        defer { cleanup() }
 
-        try KeychainHelper.saveAPIKey("sk-to-delete", service: service, account: account)
-        try KeychainHelper.deleteAPIKey(service: service, account: account)
+        try KeychainHelper.saveAPIKey("sk-to-delete-key-value-here")
+        try KeychainHelper.deleteAPIKey()
 
         #expect(throws: KeychainHelper.KeychainError.self) {
-            try KeychainHelper.readFromKeychain(service: service, account: account)
+            try KeychainHelper.readPersistedAPIKey()
         }
+    }
+
+    /// Storage directory is created automatically on first save.
+    @Test func directoryCreatedAutomatically() throws {
+        defer { cleanup() }
+
+        #expect(!FileManager.default.fileExists(atPath: testDir.path))
+        try KeychainHelper.saveAPIKey("sk-test-directory-creation-key")
+        #expect(FileManager.default.fileExists(atPath: testDir.path))
+    }
+
+    /// Saved file has 0600 permissions (owner read/write only).
+    @Test func fileHasRestrictedPermissions() throws {
+        defer { cleanup() }
+
+        try KeychainHelper.saveAPIKey("sk-test-permissions-check-key")
+        let fileURL = testDir.appendingPathComponent("api-key")
+        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+        let permissions = attributes[.posixPermissions] as? Int
+        #expect(permissions == 0o600)
     }
 
     @Test func normalizeAcceptsLikelyOpenAIKey() {

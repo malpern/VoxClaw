@@ -83,14 +83,14 @@ struct OnboardingView: View {
             demoPlayer.pauseExternalAudioDuringSpeech = settings.pauseOtherAudioDuringSpeech
             narrator.pauseExternalAudioDuringSpeech = settings.pauseOtherAudioDuringSpeech
 
-            // Short flow when a key is already saved in keychain.
+            // Short flow when a key is already saved.
             let existingKey = (try? KeychainHelper.readPersistedAPIKey()) ?? settings.openAIAPIKey
             let isPersistedKey = !existingKey.isEmpty
 
             if isPersistedKey {
                 apiKey = existingKey
                 hasExistingKey = true
-                Log.onboarding.info("Existing API key found in keychain, using short flow")
+                Log.onboarding.info("Existing API key found, using short flow")
                 narrator.speak(
                     text: "Hey! Welcome to VoxClaw — your agent can finally talk! Let's go!",
                     apiKey: existingKey
@@ -112,7 +112,7 @@ struct OnboardingView: View {
             handleStepChange(newStep)
         }
         .onChange(of: apiKey) { _, newKey in
-            // Persist key to keychain immediately so it survives window close
+            // Persist key immediately so it survives window close
             if !newKey.isEmpty {
                 settings.openAIAPIKey = newKey
                 // Auto-advance when a valid-looking key is entered on the API key step
