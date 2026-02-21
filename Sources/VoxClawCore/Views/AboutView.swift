@@ -30,7 +30,7 @@ struct AboutView: View {
                 .font(.callout)
 
             HStack(spacing: 20) {
-                Link("Website", destination: URL(string: "https://malpern.github.io/VoxClaw")!)
+                Link("Website", destination: URL(string: "https://voxclaw.com/")!)
                 Link("GitHub", destination: URL(string: "https://github.com/malpern/VoxClaw")!)
                 Link("Twitter", destination: URL(string: "https://www.x.com/malpern")!)
             }
