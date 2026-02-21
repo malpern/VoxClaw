@@ -9,6 +9,8 @@ final class ReadingSession: SpeechEngineDelegate {
     private let playbackController: any ExternalPlaybackControlling
     private var panelController: PanelController?
     private var pausedExternalAudio = false
+    private var isFinalized = false
+    private var finishTask: Task<Void, Never>?
 
     init(
         appState: AppState,
@@ -24,6 +26,10 @@ final class ReadingSession: SpeechEngineDelegate {
     }
 
     func start(text: String) async {
+        isFinalized = false
+        finishTask?.cancel()
+        finishTask = nil
+
         let words = text.split(separator: " ").map(String.init)
         let isAudioOnly = appState.audioOnly
         Log.session.info("Session start: \(words.count, privacy: .public) words, audioOnly=\(isAudioOnly, privacy: .public)")
@@ -65,7 +71,14 @@ final class ReadingSession: SpeechEngineDelegate {
 
     func stop() {
         engine.stop()
-        finish()
+        finish(mutatingAppState: true, delayedReset: false)
+    }
+
+    /// Stop this session because a new one is replacing it.
+    /// Do not mutate shared app state, otherwise stale callbacks can clear the new session UI.
+    func stopForReplacement() {
+        engine.stop()
+        finish(mutatingAppState: false, delayedReset: false)
     }
 
     // MARK: - SpeechEngineDelegate
@@ -77,7 +90,7 @@ final class ReadingSession: SpeechEngineDelegate {
     }
 
     func speechEngineDidFinish(_ engine: any SpeechEngine) {
-        finish()
+        finish(mutatingAppState: true, delayedReset: true)
     }
 
     func speechEngine(_ engine: any SpeechEngine, didChangeState state: SpeechEngineState) {
@@ -95,32 +108,46 @@ final class ReadingSession: SpeechEngineDelegate {
 
     func speechEngine(_ engine: any SpeechEngine, didEncounterError error: Error) {
         Log.session.error("Engine error: \(error)")
-        finish()
+        finish(mutatingAppState: true, delayedReset: true)
     }
 
     // MARK: - Private
 
-    private func finish() {
+    private func finish(mutatingAppState: Bool, delayedReset: Bool) {
+        guard !isFinalized else { return }
+        isFinalized = true
+        finishTask?.cancel()
+        finishTask = nil
+
         Log.session.info("Session finished")
-        appState.sessionState = .finished
+        if mutatingAppState {
+            appState.sessionState = .finished
+        }
         if pausedExternalAudio {
             playbackController.resumePaused()
             pausedExternalAudio = false
         }
 
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(500))
+        if delayedReset && mutatingAppState {
+            finishTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(500))
+                self?.panelController?.dismiss()
+                self?.appState.reset()
+            }
+        } else {
             panelController?.dismiss()
-            appState.reset()
+            if mutatingAppState {
+                appState.reset()
+            }
         }
     }
 
     private func showFeedback(_ text: String) {
         appState.feedbackText = text
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(800))
-            if appState.feedbackText == text {
-                appState.feedbackText = nil
+            if self?.appState.feedbackText == text {
+                self?.appState.feedbackText = nil
             }
         }
     }

@@ -66,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [weak self] note in
             let message = note.userInfo?[VoxClawNotificationUserInfo.openAIAuthErrorMessage] as? String
-            Task { @MainActor [weak self] in
+            MainActor.assumeIsolated {
                 self?.showOpenAIAuthAlert(errorMessage: message)
             }
         }
@@ -285,7 +285,7 @@ final class AppCoordinator {
         audioOnlyOverride: Bool? = nil,
         engineOverride: (any SpeechEngine)? = nil
     ) async {
-        activeSession?.stop()
+        activeSession?.stopForReplacement()
         appState.audioOnly = audioOnlyOverride ?? settings.audioOnly
         let engine = engineOverride ?? settings.createEngine()
         let session = ReadingSession(

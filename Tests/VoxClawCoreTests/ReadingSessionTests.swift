@@ -109,4 +109,18 @@ struct ReadingSessionTests {
         engine.simulateFinish()
         #expect(appState.sessionState == .finished)
     }
+
+    @Test func stopForReplacementDoesNotResetSharedState() async {
+        let appState = AppState()
+        appState.audioOnly = true
+        let engine = MockSpeechEngine()
+        let session = ReadingSession(appState: appState, engine: engine)
+
+        await session.start(text: "hello world")
+        #expect(!appState.words.isEmpty)
+
+        session.stopForReplacement()
+        #expect(engine.stopCalled)
+        #expect(!appState.words.isEmpty) // replacement path must not wipe current UI state
+    }
 }
