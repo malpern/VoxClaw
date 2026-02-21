@@ -15,6 +15,7 @@ actor TTSService {
 
     struct TTSError: Error, CustomStringConvertible {
         let message: String
+        let statusCode: Int?
         var description: String { message }
     }
 
@@ -27,7 +28,7 @@ actor TTSService {
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
 
                     guard let httpResponse = response as? HTTPURLResponse else {
-                        throw TTSError(message: "Invalid response type")
+                        throw TTSError(message: "Invalid response type", statusCode: nil)
                     }
 
                     Log.tts.info("TTS response: status=\(httpResponse.statusCode, privacy: .public)")
@@ -39,7 +40,10 @@ actor TTSService {
                             if errorBody.count > 1000 { break } // Don't accumulate huge error bodies
                         }
                         Log.tts.error("TTS API error: status=\(httpResponse.statusCode, privacy: .public)")
-                        throw TTSError(message: Self.friendlyError(status: httpResponse.statusCode, body: errorBody))
+                        throw TTSError(
+                            message: Self.friendlyError(status: httpResponse.statusCode, body: errorBody),
+                            statusCode: httpResponse.statusCode
+                        )
                     }
 
                     // Stream in chunks of 4800 bytes (~100ms of 24kHz 16-bit mono)
@@ -95,7 +99,7 @@ actor TTSService {
 
     private func buildRequest(text: String) throws -> URLRequest {
         guard let url = URL(string: "https://api.openai.com/v1/audio/speech") else {
-            throw TTSError(message: "Invalid API URL")
+            throw TTSError(message: "Invalid API URL", statusCode: nil)
         }
 
         var request = URLRequest(url: url)

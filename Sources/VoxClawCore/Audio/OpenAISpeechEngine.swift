@@ -59,6 +59,9 @@ final class OpenAISpeechEngine: SpeechEngine {
                 }
             }
         } catch {
+            if let ttsError = error as? TTSService.TTSError, ttsError.statusCode == 401 {
+                NotificationCenter.default.post(name: .voxClawOpenAIAuthFailed, object: nil)
+            }
             Log.tts.error("OpenAI engine error: \(error)")
             state = .error(error.localizedDescription)
             delegate?.speechEngine(self, didEncounterError: error)

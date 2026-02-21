@@ -34,8 +34,21 @@ enum SharedApp {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindow: NSWindow?
+    private var settingsWindow: NSWindow?
+    private var authFailureObserver: NSObjectProtocol?
+    private var hasShownOpenAIAuthAlert = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        authFailureObserver = NotificationCenter.default.addObserver(
+            forName: .voxClawOpenAIAuthFailed,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showOpenAIAuthAlert()
+            }
+        }
+
         if SharedApp.settings.networkListenerEnabled {
             SharedApp.coordinator.startListening(
                 appState: SharedApp.appState,
@@ -61,6 +74,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         Log.onboarding.info("Onboarding window shown")
+    }
+
+    private func showOpenAIAuthAlert() {
+        guard !hasShownOpenAIAuthAlert else { return }
+        hasShownOpenAIAuthAlert = true
+
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "OpenAI key failed"
+        alert.informativeText = "VoxClaw couldn't use your OpenAI key and switched to Apple voice. Open Settings to re-enter your key."
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "OK")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            presentSettingsWindow()
+        }
+    }
+
+    private func presentSettingsWindow() {
+        if let window = settingsWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 740),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Settings"
+        window.contentView = NSHostingView(rootView: SettingsView(settings: SharedApp.settings))
+        window.center()
+        window.isReleasedWhenClosed = false
+        settingsWindow = window
+
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
 }
 

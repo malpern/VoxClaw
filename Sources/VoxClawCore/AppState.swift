@@ -1,6 +1,10 @@
 import Foundation
 import SwiftUI
 
+extension Notification.Name {
+    static let voxClawOpenAIAuthFailed = Notification.Name("voxclaw.openaiAuthFailed")
+}
+
 enum SessionState: Sendable {
     case idle
     case loading
