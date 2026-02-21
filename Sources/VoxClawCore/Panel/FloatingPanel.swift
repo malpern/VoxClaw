@@ -13,7 +13,8 @@ final class FloatingPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hidesOnDeactivate = false
-        ignoresMouseEvents = true
+        // Allow interaction with overlay controls (e.g. pause/play button).
+        ignoresMouseEvents = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isMovableByWindowBackground = false
         hasShadow = true
