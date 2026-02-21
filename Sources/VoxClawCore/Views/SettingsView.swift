@@ -5,200 +5,205 @@ struct SettingsView: View {
     @Bindable var settings: SettingsManager
 
     @State private var copiedAgentHandoff = false
-    @State private var showOpenAISetup = false
-    @State private var showNetworkAdvanced = false
-    @State private var showAudioAdvanced = false
-    @State private var showGeneralAdvanced = false
+    @State private var showVoiceControls = true
+    @State private var showBehaviorControls = true
+    @State private var showNetworkControls = true
+    @State private var showConnectionData = true
+    @State private var showStatusData = false
     @State private var showAgentPasteBlock = false
 
     var body: some View {
         Form {
-            voiceSection
-            networkSection
             agentSetupSection
-            advancedSection
+            featureSwitchesSection
+            readOnlyDataSection
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 680)
+        .frame(width: 520, height: 720)
     }
 
-    private var voiceSection: some View {
-        Section("Voice") {
-            Picker("Engine", selection: $settings.voiceEngine) {
-                Text("Apple").tag(VoiceEngineType.apple)
-                Text("OpenAI").tag(VoiceEngineType.openai)
-            }
-            .pickerStyle(.segmented)
-
-            if settings.voiceEngine == .apple {
-                Picker("Apple Voice", selection: appleVoiceBinding) {
-                    Text("System Default").tag("" as String)
-                    ForEach(availableAppleVoices, id: \.identifier) { voice in
-                        Text("\(voice.name) (\(voice.language))")
-                            .tag(voice.identifier)
-                    }
-                }
-            } else {
-                Picker("OpenAI Voice", selection: $settings.openAIVoice) {
-                    ForEach(openAIVoices, id: \.self) { voice in
-                        Text(voice.capitalized).tag(voice)
-                    }
+    private var agentSetupSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Text("🦞")
+                        .font(.title2)
+                    Text("Tell your agent how to use VoxClaw to get a voice.")
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                DisclosureGroup("OpenAI Setup", isExpanded: $showOpenAISetup) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        if settings.isOpenAIConfigured {
-                            Label("API key saved in Keychain", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .font(.caption)
-                        } else {
-                            Label("No API key configured", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                                .font(.caption)
-                        }
-
-                        HStack {
-                            SecureField("sk-...", text: $settings.openAIAPIKey)
-                                .textFieldStyle(.roundedBorder)
-
-                            Button("Paste") {
-                                if let clip = NSPasteboard.general.string(forType: .string) {
-                                    settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
-                                }
-                            }
-                        }
-
-                        HStack(spacing: 12) {
-                            Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
-                            if settings.isOpenAIConfigured {
-                                Button("Remove Key", role: .destructive) {
-                                    settings.openAIAPIKey = ""
-                                }
-                            }
-                        }
-
-                        Text("Your key is stored in macOS Keychain.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                Button(primaryAgentActionTitle) {
+                    if !settings.networkListenerEnabled {
+                        settings.networkListenerEnabled = true
                     }
-                    .padding(.top, 6)
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(agentHandoffText, forType: .string)
+                    copiedAgentHandoff = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        copiedAgentHandoff = false
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(websiteRed)
+
+                if copiedAgentHandoff {
+                    Label("Copied. Paste this into OpenClaw.", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                } else if !settings.networkListenerEnabled {
+                    Label("This will enable listener and copy setup text.", systemImage: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
-                Text("Using OpenAI sends reading text to OpenAI for speech generation.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                collapsibleBlock("Setup Text Preview", isExpanded: $showAgentPasteBlock) {
+                    Text(agentHandoffText)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary.opacity(0.3))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
             }
         }
     }
 
-    @ViewBuilder
-    private var networkSection: some View {
-        Section("Network") {
-            Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
+    private var featureSwitchesSection: some View {
+        Section("Feature Switches") {
+            collapsibleBlock("Voice and API", isExpanded: $showVoiceControls) {
+                Picker("Engine", selection: $settings.voiceEngine) {
+                    Text("Apple").tag(VoiceEngineType.apple)
+                    Text("OpenAI").tag(VoiceEngineType.openai)
+                }
+                .pickerStyle(.segmented)
 
-            if settings.networkListenerEnabled {
+                if settings.voiceEngine == .apple {
+                    Picker("Apple Voice", selection: appleVoiceBinding) {
+                        Text("System Default").tag("" as String)
+                        ForEach(availableAppleVoices, id: \.identifier) { voice in
+                            Text("\(voice.name) (\(voice.language))")
+                                .tag(voice.identifier)
+                        }
+                    }
+                } else {
+                    Picker("OpenAI Voice", selection: $settings.openAIVoice) {
+                        ForEach(openAIVoices, id: \.self) { voice in
+                            Text(voice.capitalized).tag(voice)
+                        }
+                    }
+
+                    HStack {
+                        SecureField("sk-...", text: $settings.openAIAPIKey)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button("Paste") {
+                            if let clip = NSPasteboard.general.string(forType: .string) {
+                                settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                        if settings.isOpenAIConfigured {
+                            Button("Remove Key", role: .destructive) {
+                                settings.openAIAPIKey = ""
+                            }
+                        }
+                    }
+                }
+            }
+
+            collapsibleBlock("Playback and Startup", isExpanded: $showBehaviorControls) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
+                    Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
+                    Toggle("Launch at Login", isOn: $settings.launchAtLogin)
+                }
+            }
+
+            collapsibleBlock("Network Listener", isExpanded: $showNetworkControls) {
+                Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
+
+                if settings.networkListenerEnabled {
+                    HStack {
+                        Text("Port")
+                        Spacer()
+                        TextField("4140", value: $settings.networkListenerPort, format: .number)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                }
+            }
+        }
+    }
+
+    private var readOnlyDataSection: some View {
+        Section("Read-Only Data") {
+            collapsibleBlock("Connection URLs", isExpanded: $showConnectionData) {
                 LabeledContent("Status URL") {
                     Text("\(networkBaseURL)/status")
-                        .font(.caption.monospaced())
+                        .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
                 }
 
                 LabeledContent("Speak URL") {
                     Text("\(networkBaseURL)/read")
-                        .font(.caption.monospaced())
+                        .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
                 }
+            }
 
-                Text("OpenClaw should call Status URL first, then Speak URL.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            collapsibleBlock("Current Status", isExpanded: $showStatusData) {
+                LabeledContent("OpenAI Key") {
+                    Text(settings.isOpenAIConfigured ? "Present in Keychain" : "Not configured")
+                        .foregroundStyle(settings.isOpenAIConfigured ? .green : .secondary)
+                }
+                LabeledContent("Voice Engine") {
+                    Text(settings.voiceEngine == .openai ? "OpenAI" : "Apple")
+                }
+                LabeledContent("Network Listener") {
+                    Text(settings.networkListenerEnabled ? "Enabled" : "Disabled")
+                }
+                LabeledContent("Listener Port") {
+                    Text(String(settings.networkListenerPort))
+                }
+                LabeledContent("LAN IP") {
+                    Text(NetworkListener.localIPAddress() ?? "Unavailable")
+                }
             }
         }
     }
 
-    private var agentSetupSection: some View {
-        Section("Connect OpenClaw Agent") {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("1. Click the button below.")
-                Text("2. Paste into your OpenClaw chat.")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-
-            Button(primaryAgentActionTitle) {
-                if !settings.networkListenerEnabled {
-                    settings.networkListenerEnabled = true
+    @ViewBuilder
+    private func collapsibleBlock<Content: View>(
+        _ title: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.wrappedValue.toggle()
                 }
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(agentHandoffText, forType: .string)
-                copiedAgentHandoff = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    copiedAgentHandoff = false
+            } label: {
+                HStack {
+                    Text(title)
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: isExpanded.wrappedValue ? "chevron.down" : "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
 
-            if copiedAgentHandoff {
-                Label("Copied. Paste this into OpenClaw.", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            } else if !settings.networkListenerEnabled {
-                Label("This will enable listener and copy setup text.", systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Button(showAgentPasteBlock ? "Hide Preview" : "Show Preview") {
-                showAgentPasteBlock.toggle()
-            }
-            .font(.caption)
-
-            if showAgentPasteBlock {
-                Text(agentHandoffText)
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.quaternary.opacity(0.3))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-        }
-    }
-
-    private var advancedSection: some View {
-        Section("Advanced") {
-            DisclosureGroup("Audio", isExpanded: $showAudioAdvanced) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
-                    Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
-                }
-                .padding(.top, 6)
-            }
-
-            if settings.networkListenerEnabled {
-                DisclosureGroup("Network", isExpanded: $showNetworkAdvanced) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("Port")
-                            Spacer()
-                            TextField("4140", value: $settings.networkListenerPort, format: .number)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 80)
-                        }
-
-                        Text("Accepts POST /read and GET /status.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 6)
-                }
-            }
-
-            DisclosureGroup("General", isExpanded: $showGeneralAdvanced) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle("Launch at Login", isOn: $settings.launchAtLogin)
-                }
-                .padding(.top, 6)
+            if isExpanded.wrappedValue {
+                content()
+                    .padding(.leading, 2)
             }
         }
     }
@@ -224,6 +229,10 @@ struct SettingsView: View {
 
     private var primaryAgentActionTitle: String {
         settings.networkListenerEnabled ? "Copy Agent Setup" : "Enable Listener & Copy Setup"
+    }
+
+    private var websiteRed: Color {
+        Color(red: 0.86, green: 0.16, blue: 0.14)
     }
 
     private var agentHandoffText: String {
