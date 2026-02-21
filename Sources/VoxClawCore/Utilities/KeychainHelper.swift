@@ -129,6 +129,13 @@ enum KeychainHelper {
         return key
     }
 
+    static func uniqueMigrationKey(from keys: [String]) -> String? {
+        let normalized = keys.compactMap(normalizedIfLikelyOpenAIKey)
+        let unique = Set(normalized)
+        guard unique.count == 1 else { return nil }
+        return unique.first
+    }
+
     /// Reads API key from the default location, falling back to legacy service names.
     /// If a legacy entry is found, it is migrated into the default VoxClaw keychain item.
     static func readPersistedAPIKey() throws -> String {
@@ -146,13 +153,13 @@ enum KeychainHelper {
                 }
             }
 
-            let uniqueKeys = Set((try? readAllFromKeychain(service: candidate.service)) ?? [])
-            if uniqueKeys.count == 1, let key = uniqueKeys.first {
+            let allKeys = (try? readAllFromKeychain(service: candidate.service)) ?? []
+            if let key = uniqueMigrationKey(from: allKeys) {
                 try? saveAPIKey(key)
                 Log.keychain.info("Migrated unique API key from legacy keychain service: \(candidate.service, privacy: .public)")
                 return key
             }
-            if uniqueKeys.count > 1 {
+            if Set(allKeys).count > 1 {
                 Log.keychain.warning("Skipped legacy key migration for \(candidate.service, privacy: .public): multiple candidate keys found")
             }
         }

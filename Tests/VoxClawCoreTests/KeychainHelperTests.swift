@@ -52,4 +52,22 @@ struct KeychainHelperTests {
         #expect(KeychainHelper.normalizedIfLikelyOpenAIKey("not-a-key") == nil)
         #expect(KeychainHelper.normalizedIfLikelyOpenAIKey("sk-short") == nil)
     }
+
+    @Test func uniqueMigrationKeyRejectsAmbiguousCandidates() {
+        let keys = [
+            "sk-test-roundtrip-\(UUID().uuidString)",
+            "sk-test-roundtrip-\(UUID().uuidString)",
+        ]
+        #expect(KeychainHelper.uniqueMigrationKey(from: keys) == nil)
+    }
+
+    @Test func uniqueMigrationKeyAcceptsSingleUniqueCandidate() {
+        let key = "sk-test-roundtrip-\(UUID().uuidString)"
+        let keys = [
+            key,
+            " \(key) ",
+            "not-an-openai-key",
+        ]
+        #expect(KeychainHelper.uniqueMigrationKey(from: keys) == key)
+    }
 }
