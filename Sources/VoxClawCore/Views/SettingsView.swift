@@ -5,17 +5,13 @@ struct SettingsView: View {
     @Bindable var settings: SettingsManager
 
     @State private var copiedAgentHandoff = false
-    @State private var showVoiceControls = true
-    @State private var showBehaviorControls = true
-    @State private var showNetworkControls = true
-    @State private var showConnectionData = true
-    @State private var showStatusData = false
-    @State private var showAgentPasteBlock = false
+    @State private var showOpenAISetup = false
 
     var body: some View {
         Form {
             agentSetupSection
-            featureSwitchesSection
+            voiceSection
+            controlsSection
             readOnlyDataSection
         }
         .formStyle(.grouped)
@@ -56,85 +52,89 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+    }
 
-                collapsibleBlock("Setup Text Preview", isExpanded: $showAgentPasteBlock) {
-                    Text(agentHandoffText)
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.quaternary.opacity(0.3))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+    private var voiceSection: some View {
+        Section("Voice") {
+            Picker("Engine", selection: $settings.voiceEngine) {
+                Text("Apple").tag(VoiceEngineType.apple)
+                Text("OpenAI").tag(VoiceEngineType.openai)
+            }
+            .pickerStyle(.segmented)
+
+            if settings.voiceEngine == .apple {
+                Picker("Apple Voice", selection: appleVoiceBinding) {
+                    Text("System Default").tag("" as String)
+                    ForEach(availableAppleVoices, id: \.identifier) { voice in
+                        Text("\(voice.name) (\(voice.language))")
+                            .tag(voice.identifier)
+                    }
+                }
+            } else {
+                Picker("OpenAI Voice", selection: $settings.openAIVoice) {
+                    ForEach(openAIVoices, id: \.self) { voice in
+                        Text(voice.capitalized).tag(voice)
+                    }
+                }
+
+                DisclosureGroup("OpenAI Setup", isExpanded: $showOpenAISetup) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if settings.isOpenAIConfigured {
+                            Label("API key saved in Keychain", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                        } else {
+                            Label("No API key configured", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                        }
+
+                        HStack {
+                            SecureField("sk-...", text: $settings.openAIAPIKey)
+                                .textFieldStyle(.roundedBorder)
+
+                            Button("Paste") {
+                                if let clip = NSPasteboard.general.string(forType: .string) {
+                                    settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
+                                }
+                            }
+                        }
+
+                        HStack(spacing: 12) {
+                            Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                            if settings.isOpenAIConfigured {
+                                Button("Remove Key", role: .destructive) {
+                                    settings.openAIAPIKey = ""
+                                }
+                            }
+                        }
+
+                        Text("Your key is stored in macOS Keychain.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
                 }
             }
         }
     }
 
-    private var featureSwitchesSection: some View {
-        Section("Feature Switches") {
-            collapsibleBlock("Voice and API", isExpanded: $showVoiceControls) {
-                Picker("Engine", selection: $settings.voiceEngine) {
-                    Text("Apple").tag(VoiceEngineType.apple)
-                    Text("OpenAI").tag(VoiceEngineType.openai)
-                }
-                .pickerStyle(.segmented)
+    private var controlsSection: some View {
+        Section("Controls") {
+            Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
+            Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
+            Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
+            Toggle("Launch at Login", isOn: $settings.launchAtLogin)
 
-                if settings.voiceEngine == .apple {
-                    Picker("Apple Voice", selection: appleVoiceBinding) {
-                        Text("System Default").tag("" as String)
-                        ForEach(availableAppleVoices, id: \.identifier) { voice in
-                            Text("\(voice.name) (\(voice.language))")
-                                .tag(voice.identifier)
-                        }
-                    }
-                } else {
-                    Picker("OpenAI Voice", selection: $settings.openAIVoice) {
-                        ForEach(openAIVoices, id: \.self) { voice in
-                            Text(voice.capitalized).tag(voice)
-                        }
-                    }
-
-                    HStack {
-                        SecureField("sk-...", text: $settings.openAIAPIKey)
-                            .textFieldStyle(.roundedBorder)
-
-                        Button("Paste") {
-                            if let clip = NSPasteboard.general.string(forType: .string) {
-                                settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 12) {
-                        Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
-                        if settings.isOpenAIConfigured {
-                            Button("Remove Key", role: .destructive) {
-                                settings.openAIAPIKey = ""
-                            }
-                        }
-                    }
-                }
-            }
-
-            collapsibleBlock("Playback and Startup", isExpanded: $showBehaviorControls) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
-                    Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
-                    Toggle("Launch at Login", isOn: $settings.launchAtLogin)
-                }
-            }
-
-            collapsibleBlock("Network Listener", isExpanded: $showNetworkControls) {
-                Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
-
-                if settings.networkListenerEnabled {
-                    HStack {
-                        Text("Port")
-                        Spacer()
-                        TextField("4140", value: $settings.networkListenerPort, format: .number)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                    }
+            if settings.networkListenerEnabled {
+                HStack {
+                    Text("Port")
+                    Spacer()
+                    TextField("4140", value: $settings.networkListenerPort, format: .number)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
                 }
             }
         }
@@ -142,69 +142,46 @@ struct SettingsView: View {
 
     private var readOnlyDataSection: some View {
         Section("Read-Only Data") {
-            collapsibleBlock("Connection URLs", isExpanded: $showConnectionData) {
-                LabeledContent("Status URL") {
-                    Text("\(networkBaseURL)/status")
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
-                }
-
-                LabeledContent("Speak URL") {
-                    Text("\(networkBaseURL)/read")
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
-                }
+            LabeledContent("Status URL") {
+                Text("\(networkBaseURL)/status")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
             }
 
-            collapsibleBlock("Current Status", isExpanded: $showStatusData) {
-                LabeledContent("OpenAI Key") {
-                    Text(settings.isOpenAIConfigured ? "Present in Keychain" : "Not configured")
-                        .foregroundStyle(settings.isOpenAIConfigured ? .green : .secondary)
-                }
-                LabeledContent("Voice Engine") {
-                    Text(settings.voiceEngine == .openai ? "OpenAI" : "Apple")
-                }
-                LabeledContent("Network Listener") {
-                    Text(settings.networkListenerEnabled ? "Enabled" : "Disabled")
-                }
-                LabeledContent("Listener Port") {
-                    Text(String(settings.networkListenerPort))
-                }
-                LabeledContent("LAN IP") {
-                    Text(NetworkListener.localIPAddress() ?? "Unavailable")
-                }
+            LabeledContent("Speak URL") {
+                Text("\(networkBaseURL)/read")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
             }
-        }
-    }
 
-    @ViewBuilder
-    private func collapsibleBlock<Content: View>(
-        _ title: String,
-        isExpanded: Binding<Bool>,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.wrappedValue.toggle()
-                }
-            } label: {
-                HStack {
-                    Text(title)
-                        .font(.headline)
-                    Spacer()
-                    Image(systemName: isExpanded.wrappedValue ? "chevron.down" : "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
+            LabeledContent("OpenAI Key") {
+                Text(settings.isOpenAIConfigured ? "Present in Keychain" : "Not configured")
+                    .foregroundStyle(settings.isOpenAIConfigured ? .green : .secondary)
             }
-            .buttonStyle(.plain)
 
-            if isExpanded.wrappedValue {
-                content()
-                    .padding(.leading, 2)
+            LabeledContent("Voice Engine") {
+                Text(settings.voiceEngine == .openai ? "OpenAI" : "Apple")
             }
+
+            LabeledContent("Network Listener") {
+                Text(settings.networkListenerEnabled ? "Enabled" : "Disabled")
+            }
+
+            LabeledContent("Listener Port") {
+                Text(String(settings.networkListenerPort))
+            }
+
+            LabeledContent("LAN IP") {
+                Text(NetworkListener.localIPAddress() ?? "Unavailable")
+            }
+
+            Text(agentHandoffText)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
         }
     }
 
