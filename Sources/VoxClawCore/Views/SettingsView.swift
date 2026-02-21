@@ -6,6 +6,7 @@ struct SettingsView: View {
 
     @State private var copiedAgentHandoff = false
     @State private var showOpenAISetup = false
+    @State private var showInstructions = false
 
     var body: some View {
         Form {
@@ -21,27 +22,35 @@ struct SettingsView: View {
     private var agentSetupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 10) {
-                    Text("🦞")
-                        .font(.title2)
-                    Text("Tell your agent how to use VoxClaw to get a voice.")
-                        .font(.headline)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                HStack(alignment: .center, spacing: 12) {
+                    Button {
+                        if !settings.networkListenerEnabled {
+                            settings.networkListenerEnabled = true
+                        }
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(agentHandoffText, forType: .string)
+                        copiedAgentHandoff = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            copiedAgentHandoff = false
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("🦞")
+                            Text(primaryAgentActionTitle)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(websiteRed)
 
-                Button(primaryAgentActionTitle) {
-                    if !settings.networkListenerEnabled {
-                        settings.networkListenerEnabled = true
+                    Button(showInstructions ? "hide intrunctions" : "show intrunctions") {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showInstructions.toggle()
+                        }
                     }
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(agentHandoffText, forType: .string)
-                    copiedAgentHandoff = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        copiedAgentHandoff = false
-                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .underline()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(websiteRed)
 
                 if copiedAgentHandoff {
                     Label("Copied. Paste this into OpenClaw.", systemImage: "checkmark.circle.fill")
@@ -51,6 +60,19 @@ struct SettingsView: View {
                     Label("This will enable listener and copy setup text.", systemImage: "info.circle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                if showInstructions {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Tell your agent how to use VoxClaw to get a voice.")
+                            .font(.headline)
+                        Text("1. Click the red button to copy setup text.")
+                        Text("2. Paste it into your OpenClaw chat.")
+                        Text("3. Ask the agent to call Status URL first, then Speak URL.")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
                 }
             }
         }
