@@ -149,16 +149,6 @@ struct SettingsView: View {
             Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
             Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
             Toggle("Launch at Login", isOn: $settings.launchAtLogin)
-
-            if settings.networkListenerEnabled {
-                HStack {
-                    Text("Port")
-                    Spacer()
-                    TextField("4140", value: $settings.networkListenerPort, format: .number)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 80)
-                }
-            }
         }
     }
 
@@ -176,34 +166,9 @@ struct SettingsView: View {
                     .textSelection(.enabled)
             }
 
-            LabeledContent("OpenAI Key") {
-                Text(settings.isOpenAIConfigured ? "Present in Keychain" : "Not configured")
-                    .foregroundStyle(settings.isOpenAIConfigured ? .green : .secondary)
-            }
-
-            LabeledContent("Voice Engine") {
-                Text(settings.voiceEngine == .openai ? "OpenAI" : "Apple")
-            }
-
             LabeledContent("Network Listener") {
                 Text(settings.networkListenerEnabled ? "Enabled" : "Disabled")
             }
-
-            LabeledContent("Listener Port") {
-                Text(String(settings.networkListenerPort))
-            }
-
-            LabeledContent("LAN IP") {
-                Text(NetworkListener.localIPAddress() ?? "Unavailable")
-            }
-
-            Text(agentHandoffText)
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary.opacity(0.3))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
         }
     }
 
