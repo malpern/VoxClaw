@@ -101,7 +101,7 @@ final class NetworkSession: Sendable {
             "speak_url": "\(baseURL)/read",
             "health_url": "\(baseURL)/status",
             "auto_closed_instances_on_launch": info.autoClosedInstancesOnLaunch,
-            "agent_handoff": "🦞 Use speak_url and health_url from this payload exactly. Prefer numeric LAN IP endpoints unless a human explicitly provides a hostname."
+            "agent_handoff": "🦞 Call health_url first, then POST to speak_url. Use these URLs exactly (no hostname/discovery rewrite unless a human explicitly asks). Website: https://voxclaw.com/ Skill: https://github.com/malpern/VoxClaw/blob/main/SKILL.md"
         ]
 
         guard let data = try? JSONSerialization.data(withJSONObject: payload, options: []),

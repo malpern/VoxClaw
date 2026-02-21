@@ -76,7 +76,9 @@ final class SettingsManager {
 
     init() {
         self.voiceEngine = VoiceEngineType(rawValue: UserDefaults.standard.string(forKey: "voiceEngine") ?? "apple") ?? .apple
-        self.openAIAPIKey = (try? KeychainHelper.readAPIKey()) ?? ""
+        // App settings should reflect the key explicitly saved in VoxClaw.
+        // Avoid env-var override here so stale shell/launchd vars can't shadow Settings.
+        self.openAIAPIKey = (try? KeychainHelper.readFromKeychain()) ?? ""
         self.openAIVoice = UserDefaults.standard.string(forKey: "openAIVoice") ?? "onyx"
         self.appleVoiceIdentifier = UserDefaults.standard.string(forKey: "appleVoiceIdentifier")
         self.audioOnly = UserDefaults.standard.bool(forKey: "audioOnly")

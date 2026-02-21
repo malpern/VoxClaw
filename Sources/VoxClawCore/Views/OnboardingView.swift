@@ -517,27 +517,23 @@ private struct SuccessStep: View {
     @State private var copiedAgentHandoff = false
 
     private var agentHandoffText: String {
-        let localBase = "http://localhost:\(port)"
         let lanIP = NetworkListener.localIPAddress()
-        let speakURL = lanIP.map { "http://\($0):\(port)" }
+        let baseURL = lanIP.map { "http://\($0):\(port)" }
             ?? "http://<lan-ip>:\(port)"
-        let healthURL = "\(speakURL)/status"
+        let healthURL = "\(baseURL)/status"
+        let speakURL = "\(baseURL)/read"
         return """
         🦞 VoxClaw setup pointer:
-        - Website: https://voxclaw.com/
-        - Agent skill/API doc: https://github.com/malpern/VoxClaw/blob/main/SKILL.md
-        - Agent contract:
-          If this pointer includes health_url/speak_url, use them directly.
-          Do not ask for LAN IP, mDNS, or discovery first.
-          Call health_url now, then speak_url.
-        - Gold path (always use this order):
-          1) On VoxClaw Mac: curl -sS \(localBase)/status
-          2) From agent host: curl -sS \(healthURL)
-          3) Then speak with: \(speakURL)/read
-        - Test speak:
-          curl -X POST \(speakURL)/read -H 'Content-Type: application/json' -d '{"text":"Hello from OpenClaw"}'
-        - Never auto-switch to .local hostnames. Use numeric LAN IP unless a human explicitly gives a .local target.
-        - If LAN step fails but localhost works: check macOS Firewall allows VoxClaw incoming connections.
+        health_url: \(healthURL)
+        speak_url: \(speakURL)
+
+        Agent rules:
+        1) GET health_url first.
+        2) If status is ok, POST text to speak_url.
+        3) Use these URLs exactly (no .local/discovery rewrite unless a human explicitly asks).
+
+        Website: https://voxclaw.com/
+        Skill doc: https://github.com/malpern/VoxClaw/blob/main/SKILL.md
         """
     }
 
