@@ -5,19 +5,21 @@ struct SettingsView: View {
     @Bindable var settings: SettingsManager
 
     @State private var copiedAgentHandoff = false
-    @State private var showOpenAISetup = true
+    @State private var showOpenAISetup = false
     @State private var showNetworkAdvanced = false
+    @State private var showAudioAdvanced = false
+    @State private var showGeneralAdvanced = false
     @State private var showAgentPasteBlock = false
 
     var body: some View {
         Form {
             voiceSection
-            playbackSection
             networkSection
-            generalSection
+            agentSetupSection
+            advancedSection
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 700)
+        .frame(width: 520, height: 680)
     }
 
     private var voiceSection: some View {
@@ -89,58 +91,92 @@ struct SettingsView: View {
         }
     }
 
-    private var playbackSection: some View {
-        Section("Playback") {
-            Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
-            Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
-        }
-    }
-
     @ViewBuilder
     private var networkSection: some View {
         Section("Network") {
-            Toggle("Listen for network requests", isOn: $settings.networkListenerEnabled)
+            Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
 
             if settings.networkListenerEnabled {
+                LabeledContent("Status URL") {
+                    Text("\(networkBaseURL)/status")
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+
                 LabeledContent("Speak URL") {
                     Text("\(networkBaseURL)/read")
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                 }
 
-                LabeledContent("Health URL") {
-                    Text("\(networkBaseURL)/status")
-                        .font(.caption.monospaced())
-                        .textSelection(.enabled)
+                Text("OpenClaw should call Status URL first, then Speak URL.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var agentSetupSection: some View {
+        Section("Connect OpenClaw Agent") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("1. Click the button below.")
+                Text("2. Paste into your OpenClaw chat.")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            Button(primaryAgentActionTitle) {
+                if !settings.networkListenerEnabled {
+                    settings.networkListenerEnabled = true
                 }
-
-                HStack {
-                    Button(copiedAgentHandoff ? "Copied" : "Copy Agent Setup") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(agentHandoffText, forType: .string)
-                        copiedAgentHandoff = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            copiedAgentHandoff = false
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button(showAgentPasteBlock ? "Hide Details" : "Show Details") {
-                        showAgentPasteBlock.toggle()
-                    }
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(agentHandoffText, forType: .string)
+                copiedAgentHandoff = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    copiedAgentHandoff = false
                 }
+            }
+            .buttonStyle(.borderedProminent)
 
-                if showAgentPasteBlock {
-                    Text(agentHandoffText)
-                        .font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.quaternary.opacity(0.3))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+            if copiedAgentHandoff {
+                Label("Copied. Paste this into OpenClaw.", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else if !settings.networkListenerEnabled {
+                Label("This will enable listener and copy setup text.", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button(showAgentPasteBlock ? "Hide Preview" : "Show Preview") {
+                showAgentPasteBlock.toggle()
+            }
+            .font(.caption)
+
+            if showAgentPasteBlock {
+                Text(agentHandoffText)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.quaternary.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+        }
+    }
+
+    private var advancedSection: some View {
+        Section("Advanced") {
+            DisclosureGroup("Audio", isExpanded: $showAudioAdvanced) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
+                    Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
                 }
+                .padding(.top, 6)
+            }
 
-                DisclosureGroup("Advanced Network", isExpanded: $showNetworkAdvanced) {
+            if settings.networkListenerEnabled {
+                DisclosureGroup("Network", isExpanded: $showNetworkAdvanced) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("Port")
@@ -157,12 +193,13 @@ struct SettingsView: View {
                     .padding(.top, 6)
                 }
             }
-        }
-    }
 
-    private var generalSection: some View {
-        Section("General") {
-            Toggle("Launch at Login", isOn: $settings.launchAtLogin)
+            DisclosureGroup("General", isExpanded: $showGeneralAdvanced) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Launch at Login", isOn: $settings.launchAtLogin)
+                }
+                .padding(.top, 6)
+            }
         }
     }
 
@@ -183,6 +220,10 @@ struct SettingsView: View {
         let lanIP = NetworkListener.localIPAddress()
         return lanIP.map { "http://\($0):\(settings.networkListenerPort)" }
             ?? "http://<lan-ip>:\(settings.networkListenerPort)"
+    }
+
+    private var primaryAgentActionTitle: String {
+        settings.networkListenerEnabled ? "Copy Agent Setup" : "Enable Listener & Copy Setup"
     }
 
     private var agentHandoffText: String {
