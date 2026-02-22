@@ -115,12 +115,12 @@ struct SettingsView: View {
                 }
             }
 
-            VStack(spacing: 2) {
-                HStack {
-                    Text("Speed: \(settings.voiceSpeed, specifier: "%.1f")x")
-                    Spacer()
-                }
+            HStack {
+                Text("Speed: \(settings.voiceSpeed, specifier: "%.1f")x")
+                Spacer()
                 SpeedSlider(speed: $settings.voiceSpeed)
+                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: 180)
             }
             .accessibilityIdentifier(AccessibilityID.Settings.voiceEnginePicker + "Speed")
 
@@ -233,12 +233,12 @@ struct SettingsView: View {
 
     private var controlsSection: some View {
         Section("Controls") {
-            Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
-                .accessibilityIdentifier(AccessibilityID.Settings.networkListenerToggle)
-            Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
-                .accessibilityIdentifier(AccessibilityID.Settings.pauseOtherAudioToggle)
             Toggle("Audio only (hide teleprompter overlay)", isOn: $settings.audioOnly)
                 .accessibilityIdentifier(AccessibilityID.Settings.audioOnlyToggle)
+            Toggle("Pause other audio while VoxClaw speaks", isOn: $settings.pauseOtherAudioDuringSpeech)
+                .accessibilityIdentifier(AccessibilityID.Settings.pauseOtherAudioToggle)
+            Toggle("Enable Network Listener", isOn: $settings.networkListenerEnabled)
+                .accessibilityIdentifier(AccessibilityID.Settings.networkListenerToggle)
             Toggle("Launch at Login", isOn: $settings.launchAtLogin)
                 .accessibilityIdentifier(AccessibilityID.Settings.launchAtLoginToggle)
         }

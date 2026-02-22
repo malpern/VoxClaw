@@ -87,4 +87,37 @@ enum WordTimingEstimator {
         // Rough estimate: ~150ms per character for speech
         return Double(text.count) * 0.015
     }
+
+    /// Per-word cadence estimate for immediate highlighting before real timings are available.
+    /// Optimized for accuracy in the first ~5 seconds rather than full-passage accuracy.
+    static func estimateCadence(words: [String], rate: Float) -> [WordTiming] {
+        guard !words.isEmpty else { return [] }
+
+        let basePerChar: Double = 0.045 / Double(max(rate, 0.5)) // ~45ms per char at 1x
+        let minWordDuration: Double = 0.12 / Double(max(rate, 0.5))
+
+        var timings: [WordTiming] = []
+        var currentTime: Double = 0
+
+        for word in words {
+            var duration = max(Double(word.count) * basePerChar, minWordDuration)
+
+            // Punctuation pauses
+            if let lastChar = word.last {
+                switch lastChar {
+                case ".", "!", "?":
+                    duration += 0.30 / Double(max(rate, 0.5))
+                case ",", ";", ":":
+                    duration += 0.15 / Double(max(rate, 0.5))
+                default:
+                    break
+                }
+            }
+
+            timings.append(WordTiming(word: word, startTime: currentTime, endTime: currentTime + duration))
+            currentTime += duration
+        }
+
+        return timings
+    }
 }
