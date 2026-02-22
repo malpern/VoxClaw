@@ -15,11 +15,7 @@ public struct OverlayQuickSettings: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Speed: \(settings.voiceSpeed, specifier: "%.1f")x")
                     .font(.caption)
-                    .fontWeight(settings.voiceSpeed == 1.0 ? .semibold : .regular)
-                Slider(value: speedBinding, in: 0.5...3.0, step: 0.1)
-                    .onChange(of: settings.voiceSpeed) { _, new in
-                        if abs(new - 1.0) < 0.06 { settings.voiceSpeed = 1.0 }
-                    }
+                SpeedSlider(speed: speedBinding)
             }
 
             OverlayPresetGallery(settings: settings, compact: true)
