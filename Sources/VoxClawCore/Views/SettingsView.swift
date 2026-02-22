@@ -6,7 +6,8 @@ struct SettingsView: View {
     @Bindable var settings: SettingsManager
 
     @State private var copiedAgentHandoff = false
-    @State private var showOpenAISetup = false
+    @State private var showAPIKeySheet = false
+    @State private var pendingAPIKey = ""
     @State private var showInstructions = false
 
     var body: some View {
@@ -92,6 +93,12 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier(AccessibilityID.Settings.voiceEnginePicker)
+            .onChange(of: settings.voiceEngine) { _, newValue in
+                if newValue == .openai && !settings.isOpenAIConfigured {
+                    pendingAPIKey = ""
+                    showAPIKeySheet = true
+                }
+            }
 
             if settings.voiceEngine == .apple {
                 Picker("Apple Voice", selection: appleVoiceBinding) {
@@ -119,57 +126,75 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                DisclosureGroup(isExpanded: $showOpenAISetup, content: {
-                    VStack(alignment: .leading, spacing: 10) {
-                        if settings.isOpenAIConfigured {
-                            Label("API key saved in Keychain", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .font(.caption)
-                        } else {
-                            Label("No API key configured", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                                .font(.caption)
-                        }
-
-                        HStack {
-                            SecureField("sk-...", text: $settings.openAIAPIKey)
-                                .textFieldStyle(.roundedBorder)
-                                .accessibilityIdentifier(AccessibilityID.Settings.apiKeyField)
-
-                            Button("Paste") {
-                                if let clip = NSPasteboard.general.string(forType: .string) {
-                                    settings.openAIAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
-                                }
-                            }
-                            .accessibilityIdentifier(AccessibilityID.Settings.pasteAPIKey)
-                        }
-
-                        HStack(spacing: 12) {
-                            Link("Get API key", destination: URL(string: "https://platform.openai.com/api-keys")!)
-                                .accessibilityIdentifier(AccessibilityID.Settings.getAPIKeyLink)
-                            if settings.isOpenAIConfigured {
-                                Button("Remove Key", role: .destructive) {
-                                    settings.openAIAPIKey = ""
-                                }
-                                .accessibilityIdentifier(AccessibilityID.Settings.removeAPIKey)
-                            }
-                        }
-
-                        Text("Your key is stored in macOS Keychain.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                HStack {
+                    Text(maskedAPIKey)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier(AccessibilityID.Settings.apiKeyDisplay)
+                    Spacer()
+                    Button("Remove Key", role: .destructive) {
+                        settings.openAIAPIKey = ""
+                        settings.voiceEngine = .apple
                     }
-                    .padding(.top, 6)
-                }, label: {
-                    Button {
-                        withAnimation { showOpenAISetup.toggle() }
-                    } label: {
-                        Text("OpenAI Setup")
-                    }
-                    .buttonStyle(.plain)
-                })
+                    .accessibilityIdentifier(AccessibilityID.Settings.removeAPIKey)
+                }
             }
         }
+        .sheet(isPresented: $showAPIKeySheet, onDismiss: {
+            if !settings.isOpenAIConfigured {
+                settings.voiceEngine = .apple
+            }
+        }) {
+            apiKeySheet
+        }
+    }
+
+    private var apiKeySheet: some View {
+        VStack(spacing: 16) {
+            Text("Enter OpenAI API Key")
+                .font(.headline)
+
+            HStack {
+                SecureField("sk-...", text: $pendingAPIKey)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier(AccessibilityID.Settings.apiKeyField)
+
+                Button("Paste") {
+                    if let clip = NSPasteboard.general.string(forType: .string) {
+                        pendingAPIKey = clip.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+                .accessibilityIdentifier(AccessibilityID.Settings.pasteAPIKey)
+            }
+
+            Link("Get API key at platform.openai.com", destination: URL(string: "https://platform.openai.com/api-keys")!)
+                .font(.caption)
+                .accessibilityIdentifier(AccessibilityID.Settings.getAPIKeyLink)
+
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    showAPIKeySheet = false
+                }
+                .keyboardShortcut(.cancelAction)
+                .accessibilityIdentifier(AccessibilityID.Settings.apiKeySheetCancel)
+
+                Button("Save") {
+                    settings.openAIAPIKey = pendingAPIKey
+                    showAPIKeySheet = false
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(pendingAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier(AccessibilityID.Settings.apiKeySheetSave)
+            }
+        }
+        .padding(24)
+        .frame(width: 400)
+    }
+
+    private var maskedAPIKey: String {
+        let key = settings.openAIAPIKey
+        guard key.count > 6 else { return "sk-..." }
+        return "\(key.prefix(3))...\(key.suffix(4))"
     }
 
     private var overlayAppearanceSection: some View {

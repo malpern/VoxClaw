@@ -21,10 +21,14 @@ public final class SettingsManager {
 
     public var openAIAPIKey: String {
         didSet {
-            if openAIAPIKey.isEmpty {
-                try? KeychainHelper.deleteAPIKey()
-            } else {
-                try? KeychainHelper.saveAPIKey(openAIAPIKey)
+            do {
+                if openAIAPIKey.isEmpty {
+                    try KeychainHelper.deleteAPIKey()
+                } else {
+                    try KeychainHelper.saveAPIKey(openAIAPIKey)
+                }
+            } catch {
+                Log.settings.error("Failed to persist API key: \(error)")
             }
         }
     }
@@ -67,8 +71,11 @@ public final class SettingsManager {
 
     public var overlayAppearance: OverlayAppearance {
         didSet {
-            if let data = try? JSONEncoder().encode(overlayAppearance) {
+            do {
+                let data = try JSONEncoder().encode(overlayAppearance)
                 UserDefaults.standard.set(data, forKey: "overlayAppearance")
+            } catch {
+                Log.settings.error("Failed to encode overlay appearance: \(error)")
             }
         }
     }
@@ -156,10 +163,14 @@ public final class SettingsManager {
             Task { @MainActor [weak self] in
                 guard let self, newKey != self.openAIAPIKey else { return }
                 // Save locally without triggering didSet's KVS write (already in KVS)
-                if newKey.isEmpty {
-                    try? KeychainHelper.deleteAPIKey()
-                } else {
-                    try? KeychainHelper.saveAPIKey(newKey)
+                do {
+                    if newKey.isEmpty {
+                        try KeychainHelper.deleteAPIKey()
+                    } else {
+                        try KeychainHelper.saveAPIKey(newKey)
+                    }
+                } catch {
+                    Log.settings.error("Failed to persist iCloud KVS key locally: \(error)")
                 }
                 self.openAIAPIKey = newKey
                 Log.settings.info("API key updated from iCloud KVS")
@@ -175,6 +186,7 @@ public final class SettingsManager {
         case .openai:
             guard isOpenAIConfigured else {
                 Log.settings.info("OpenAI selected but no API key — falling back to Apple")
+                voiceEngine = .apple
                 NotificationCenter.default.post(name: .voxClawOpenAIKeyMissing, object: nil)
                 return AppleSpeechEngine(voiceIdentifier: appleVoiceIdentifier)
             }

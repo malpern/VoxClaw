@@ -43,7 +43,7 @@ public struct OverlayAppearance: Codable, Sendable, Equatable {
     public var fontFamily: String = "Helvetica Neue"
     public var fontSize: CGFloat = 28
     public var fontWeight: String = "medium"
-    public var lineSpacing: CGFloat = 6
+    public var lineHeightMultiplier: CGFloat = 1.2
     public var wordSpacing: CGFloat = 6
     public var textColor: CodableColor = .white
     public var highlightColor: CodableColor = CodableColor(red: 1, green: 1, blue: 0, opacity: 0.35)
@@ -56,7 +56,22 @@ public struct OverlayAppearance: Codable, Sendable, Equatable {
     public var panelWidthFraction: Double = 1.0 / 3.0
     public var panelHeight: CGFloat = 162
 
+    /// Line spacing in points, derived from the multiplier and current font size.
+    public var effectiveLineSpacing: CGFloat {
+        fontSize * (lineHeightMultiplier - 1)
+    }
+
     public init() {}
+
+    // Explicit CodingKeys so we can decode legacy "lineSpacing" from old persisted data.
+    private enum CodingKeys: String, CodingKey {
+        case fontFamily, fontSize, fontWeight, lineHeightMultiplier, wordSpacing
+        case textColor, highlightColor, pastWordOpacity, futureWordOpacity
+        case backgroundColor, cornerRadius, horizontalPadding, verticalPadding
+        case panelWidthFraction, panelHeight
+        // Legacy key — only used for decoding old data.
+        case lineSpacing
+    }
 
     public init(from decoder: Decoder) throws {
         let defaults = OverlayAppearance()
@@ -64,7 +79,14 @@ public struct OverlayAppearance: Codable, Sendable, Equatable {
         fontFamily = try container.decodeIfPresent(String.self, forKey: .fontFamily) ?? defaults.fontFamily
         fontSize = try container.decodeIfPresent(CGFloat.self, forKey: .fontSize) ?? defaults.fontSize
         fontWeight = try container.decodeIfPresent(String.self, forKey: .fontWeight) ?? defaults.fontWeight
-        lineSpacing = try container.decodeIfPresent(CGFloat.self, forKey: .lineSpacing) ?? defaults.lineSpacing
+        // Prefer new multiplier; fall back to converting old point-based lineSpacing.
+        if let multiplier = try container.decodeIfPresent(CGFloat.self, forKey: .lineHeightMultiplier) {
+            lineHeightMultiplier = multiplier
+        } else if let oldSpacing = try container.decodeIfPresent(CGFloat.self, forKey: .lineSpacing) {
+            lineHeightMultiplier = fontSize > 0 ? (oldSpacing / fontSize) + 1 : defaults.lineHeightMultiplier
+        } else {
+            lineHeightMultiplier = defaults.lineHeightMultiplier
+        }
         wordSpacing = try container.decodeIfPresent(CGFloat.self, forKey: .wordSpacing) ?? defaults.wordSpacing
         textColor = try container.decodeIfPresent(CodableColor.self, forKey: .textColor) ?? defaults.textColor
         highlightColor = try container.decodeIfPresent(CodableColor.self, forKey: .highlightColor) ?? defaults.highlightColor
@@ -76,6 +98,25 @@ public struct OverlayAppearance: Codable, Sendable, Equatable {
         verticalPadding = try container.decodeIfPresent(CGFloat.self, forKey: .verticalPadding) ?? defaults.verticalPadding
         panelWidthFraction = try container.decodeIfPresent(Double.self, forKey: .panelWidthFraction) ?? defaults.panelWidthFraction
         panelHeight = try container.decodeIfPresent(CGFloat.self, forKey: .panelHeight) ?? defaults.panelHeight
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(fontFamily, forKey: .fontFamily)
+        try container.encode(fontSize, forKey: .fontSize)
+        try container.encode(fontWeight, forKey: .fontWeight)
+        try container.encode(lineHeightMultiplier, forKey: .lineHeightMultiplier)
+        try container.encode(wordSpacing, forKey: .wordSpacing)
+        try container.encode(textColor, forKey: .textColor)
+        try container.encode(highlightColor, forKey: .highlightColor)
+        try container.encode(pastWordOpacity, forKey: .pastWordOpacity)
+        try container.encode(futureWordOpacity, forKey: .futureWordOpacity)
+        try container.encode(backgroundColor, forKey: .backgroundColor)
+        try container.encode(cornerRadius, forKey: .cornerRadius)
+        try container.encode(horizontalPadding, forKey: .horizontalPadding)
+        try container.encode(verticalPadding, forKey: .verticalPadding)
+        try container.encode(panelWidthFraction, forKey: .panelWidthFraction)
+        try container.encode(panelHeight, forKey: .panelHeight)
     }
 
     public var fontWeightValue: Font.Weight {

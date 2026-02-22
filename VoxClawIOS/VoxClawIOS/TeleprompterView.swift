@@ -21,7 +21,7 @@ struct TeleprompterView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {
-                        FlowLayout(hSpacing: appearance.wordSpacing, vSpacing: appearance.lineSpacing) {
+                        FlowLayout(hSpacing: appearance.wordSpacing, vSpacing: appearance.effectiveLineSpacing) {
                             ForEach(appState.words.indices, id: \.self) { index in
                                 TeleprompterWordView(
                                     word: appState.words[index],

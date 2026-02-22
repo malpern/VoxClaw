@@ -8,7 +8,7 @@ struct OverlayAppearanceTests {
         appearance.fontFamily = "SF Mono"
         appearance.fontSize = 36
         appearance.fontWeight = "bold"
-        appearance.lineSpacing = 10
+        appearance.lineHeightMultiplier = 1.5
         appearance.wordSpacing = 8
         appearance.textColor = CodableColor(red: 0.5, green: 0.6, blue: 0.7, opacity: 0.8)
         appearance.highlightColor = CodableColor(red: 0.1, green: 0.2, blue: 0.3, opacity: 0.4)
@@ -33,7 +33,7 @@ struct OverlayAppearanceTests {
         #expect(appearance.fontFamily == "Helvetica Neue")
         #expect(appearance.fontSize == 28)
         #expect(appearance.fontWeight == "medium")
-        #expect(appearance.lineSpacing == 6)
+        #expect(appearance.lineHeightMultiplier == 1.2)
         #expect(appearance.wordSpacing == 6)
         #expect(appearance.textColor == .white)
         #expect(appearance.highlightColor == CodableColor(red: 1, green: 1, blue: 0, opacity: 0.35))

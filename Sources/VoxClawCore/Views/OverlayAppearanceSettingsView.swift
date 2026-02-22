@@ -34,6 +34,18 @@ public struct OverlayAppearanceSettingsView: View {
                             .accessibilityIdentifier(AccessibilityID.Appearance.fontSizeSlider)
                     }
 
+                    HStack {
+                        Text("Line Height: \(String(format: "%.1f", settings.overlayAppearance.lineHeightMultiplier))x")
+                        Slider(value: lineHeightBinding, in: 1.0...2.5, step: 0.1)
+                            .accessibilityIdentifier(AccessibilityID.Appearance.lineSpacingSlider)
+                    }
+
+                    HStack {
+                        Text("Padding: \(Int(settings.overlayAppearance.horizontalPadding))pt")
+                        Slider(value: paddingBinding, in: 0...60, step: 2)
+                            .accessibilityIdentifier(AccessibilityID.Appearance.hPaddingSlider)
+                    }
+
                     ColorPicker("Text Color", selection: textColorBinding)
                         .accessibilityIdentifier(AccessibilityID.Appearance.textColorPicker)
 
@@ -78,6 +90,23 @@ public struct OverlayAppearanceSettingsView: View {
         Binding(
             get: { Double(settings.overlayAppearance.fontSize) },
             set: { settings.overlayAppearance.fontSize = CGFloat($0) }
+        )
+    }
+
+    private var lineHeightBinding: Binding<Double> {
+        Binding(
+            get: { Double(settings.overlayAppearance.lineHeightMultiplier) },
+            set: { settings.overlayAppearance.lineHeightMultiplier = CGFloat($0) }
+        )
+    }
+
+    private var paddingBinding: Binding<Double> {
+        Binding(
+            get: { Double(settings.overlayAppearance.horizontalPadding) },
+            set: {
+                settings.overlayAppearance.horizontalPadding = CGFloat($0)
+                settings.overlayAppearance.verticalPadding = CGFloat($0)
+            }
         )
     }
 

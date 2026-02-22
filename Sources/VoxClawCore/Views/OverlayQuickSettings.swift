@@ -48,9 +48,9 @@ public struct OverlayQuickSettings: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Line Spacing: \(Int(settings.overlayAppearance.lineSpacing))pt")
+                        Text("Line Height: \(String(format: "%.1f", settings.overlayAppearance.lineHeightMultiplier))x")
                             .font(.caption)
-                        Slider(value: lineSpacingBinding, in: 0...20, step: 1)
+                        Slider(value: lineHeightBinding, in: 1.0...2.5, step: 0.1)
                             .accessibilityIdentifier(AccessibilityID.QuickSettings.lineSpacingSlider)
                     }
 
@@ -92,10 +92,10 @@ public struct OverlayQuickSettings: View {
         )
     }
 
-    private var lineSpacingBinding: Binding<Double> {
+    private var lineHeightBinding: Binding<Double> {
         Binding(
-            get: { Double(settings.overlayAppearance.lineSpacing) },
-            set: { settings.overlayAppearance.lineSpacing = CGFloat($0) }
+            get: { Double(settings.overlayAppearance.lineHeightMultiplier) },
+            set: { settings.overlayAppearance.lineHeightMultiplier = CGFloat($0) }
         )
     }
 
