@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var showAPIKeySheet = false
     @State private var pendingAPIKey = ""
     @State private var showInstructions = false
+    @State private var voicePreview = VoicePreviewPlayer()
 
     var body: some View {
         ScrollView {
@@ -116,6 +117,14 @@ struct SettingsView: View {
                     }
                 }
                 .accessibilityIdentifier(AccessibilityID.Settings.openAIVoicePicker)
+                .onChange(of: settings.openAIVoice) { _, newVoice in
+                    guard settings.isOpenAIConfigured else { return }
+                    voicePreview.play(
+                        voice: newVoice,
+                        apiKey: settings.openAIAPIKey,
+                        instructions: settings.readingStyle.isEmpty ? nil : settings.readingStyle
+                    )
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     TextField("Reading Style", text: $settings.readingStyle, prompt: Text("e.g. Read warmly and conversationally"))

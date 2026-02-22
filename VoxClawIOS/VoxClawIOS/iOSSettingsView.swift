@@ -8,6 +8,7 @@ struct iOSSettingsView: View {
     let appState: AppState
 
     @State private var portText: String = ""
+    @State private var voicePreview = VoicePreviewPlayer()
 
     private let openAIVoices = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"]
 
@@ -37,6 +38,14 @@ struct iOSSettingsView: View {
                     ForEach(openAIVoices, id: \.self) { voice in
                         Text(voice.capitalized).tag(voice)
                     }
+                }
+                .onChange(of: settings.openAIVoice) { _, newVoice in
+                    guard settings.isOpenAIConfigured else { return }
+                    voicePreview.play(
+                        voice: newVoice,
+                        apiKey: settings.openAIAPIKey,
+                        instructions: settings.readingStyle.isEmpty ? nil : settings.readingStyle
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
