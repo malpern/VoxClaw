@@ -34,7 +34,7 @@ struct OverlayAppearanceTests {
         #expect(appearance.fontSize == 28)
         #expect(appearance.fontWeight == "medium")
         #expect(appearance.lineHeightMultiplier == 1.2)
-        #expect(appearance.wordSpacing == 6)
+        #expect(appearance.wordSpacing == 2)
         #expect(appearance.textColor == .white)
         #expect(appearance.highlightColor == CodableColor(red: 1, green: 1, blue: 0, opacity: 0.35))
         #expect(appearance.pastWordOpacity == 0.5)

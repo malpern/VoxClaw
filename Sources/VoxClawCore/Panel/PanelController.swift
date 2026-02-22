@@ -112,15 +112,15 @@ final class PanelController {
         }
 
         let frame = panel.frame
-        let scaleFactor: CGFloat = 0.92
+        let scaleFactor: CGFloat = 0.75
         let targetWidth = frame.width * scaleFactor
         let targetHeight = frame.height * scaleFactor
         let targetX = frame.origin.x + (frame.width - targetWidth) / 2
-        let targetY = frame.origin.y + (frame.height - targetHeight) / 2 + 12
+        let targetY = frame.origin.y + (frame.height - targetHeight) / 2
 
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.25
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            context.duration = 0.15
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.4, 0, 1, 1)
             panel.animator().setFrame(NSRect(x: targetX, y: targetY, width: targetWidth, height: targetHeight), display: true)
             panel.animator().alphaValue = 0
         }, completionHandler: {

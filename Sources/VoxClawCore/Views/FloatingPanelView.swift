@@ -7,8 +7,16 @@ struct FloatingPanelView: View {
     var onOpenSettings: (() -> Void)?
 
     @State private var isHovering = false
+    @State private var showPauseButton = false
+    @State private var pauseButtonPulse = false
+    @State private var pauseButtonHideTask: Task<Void, Never>?
 
     private var appearance: OverlayAppearance { settings.overlayAppearance }
+
+    private var readingProgress: Double {
+        guard appState.words.count > 1 else { return 0 }
+        return Double(appState.currentWordIndex) / Double(appState.words.count - 1)
+    }
 
     var body: some View {
         ZStack {
@@ -39,14 +47,6 @@ struct FloatingPanelView: View {
                 }
             }
 
-            // Feedback badge overlay (pause/resume/skip indicators)
-            VStack {
-                Spacer()
-                FeedbackBadge(text: appState.feedbackText)
-                    .animation(.easeInOut(duration: 0.2), value: appState.feedbackText)
-                    .padding(.bottom, 12)
-            }
-
             // Speed indicator (bottom-right, fades in/out)
             VStack {
                 Spacer()
@@ -59,7 +59,17 @@ struct FloatingPanelView: View {
                 }
             }
 
-            if isHovering {
+            // Subtle progress bar at the very bottom, respecting corner radius
+            VStack(spacing: 0) {
+                Spacer()
+                ProgressBarView(
+                    progress: readingProgress,
+                    cornerRadius: appearance.cornerRadius,
+                    color: appearance.highlightColor.color
+                )
+            }
+
+            if isHovering || showPauseButton {
                 overlayControls
                     .transition(.opacity)
             }
@@ -69,7 +79,35 @@ struct FloatingPanelView: View {
                 isHovering = hovering
             }
         }
+        .onChange(of: appState.isPaused) { _, _ in
+            flashPauseButton()
+        }
         .accessibilityIdentifier(AccessibilityID.Overlay.panel)
+    }
+
+    private func flashPauseButton() {
+        // Show the button and pulse it to draw attention
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showPauseButton = true
+        }
+        withAnimation(.spring(duration: 0.25, bounce: 0.4)) {
+            pauseButtonPulse = true
+        }
+        // Settle back to normal size
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(duration: 0.25, bounce: 0.3)) {
+                pauseButtonPulse = false
+            }
+        }
+        // Hide after a few seconds
+        pauseButtonHideTask?.cancel()
+        pauseButtonHideTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled, !isHovering else { return }
+            withAnimation(.easeOut(duration: 0.4)) {
+                showPauseButton = false
+            }
+        }
     }
 
     private var overlayControls: some View {
@@ -96,6 +134,7 @@ struct FloatingPanelView: View {
                         .foregroundStyle(.white)
                         .frame(width: 36, height: 36)
                         .glassEffect(.regular.interactive(), in: .circle)
+                        .scaleEffect(pauseButtonPulse ? 1.3 : 1.0)
                 }
                 .buttonStyle(.plain)
                 #if os(macOS)
@@ -121,8 +160,8 @@ private struct WordView: View {
         Text(word)
             .font(.custom(appearance.fontFamily, size: appearance.fontSize).weight(appearance.fontWeightValue))
             .foregroundStyle(textColor)
-            .padding(.horizontal, isHighlighted ? 4 : 0)
-            .padding(.vertical, isHighlighted ? 2 : 0)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
             .background(
                 Group {
                     if isHighlighted {
@@ -152,5 +191,25 @@ private struct WordView: View {
         } else {
             return appearance.textColor.color.opacity(appearance.futureWordOpacity)
         }
+    }
+}
+
+/// A 1.5pt progress line that hugs the bottom of the overlay, clipped to the panel's corner radius.
+private struct ProgressBarView: View {
+    let progress: Double
+    let cornerRadius: CGFloat
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width * min(max(progress, 0), 1)
+            Rectangle()
+                .fill(color.opacity(0.5))
+                .frame(width: width, height: 1.5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 1.5)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: cornerRadius, bottomTrailingRadius: cornerRadius))
+        .animation(.linear(duration: 0.15), value: progress)
     }
 }

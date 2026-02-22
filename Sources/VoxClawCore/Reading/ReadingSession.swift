@@ -82,13 +82,11 @@ public final class ReadingSession: SpeechEngineDelegate {
             engine.resume()
             appState.isPaused = false
             appState.sessionState = .playing
-            showFeedback("▶ Play")
         } else {
             Log.session.info("Session paused")
             engine.pause()
             appState.isPaused = true
             appState.sessionState = .paused
-            showFeedback("⏸ Paused")
         }
     }
 

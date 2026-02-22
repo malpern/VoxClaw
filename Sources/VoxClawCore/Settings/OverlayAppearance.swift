@@ -44,7 +44,7 @@ public struct OverlayAppearance: Codable, Sendable, Equatable {
     public var fontSize: CGFloat = 28
     public var fontWeight: String = "medium"
     public var lineHeightMultiplier: CGFloat = 1.2
-    public var wordSpacing: CGFloat = 6
+    public var wordSpacing: CGFloat = 2
     public var textColor: CodableColor = .white
     public var highlightColor: CodableColor = CodableColor(red: 1, green: 1, blue: 0, opacity: 0.35)
     public var pastWordOpacity: Double = 0.5

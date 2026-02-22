@@ -99,7 +99,7 @@ struct OverlayPreset: Identifiable, Sendable {
             appearance: {
                 var a = OverlayAppearance()
                 a.fontFamily = "SF Mono"
-                a.fontSize = 24
+                a.fontSize = 28
                 a.fontWeight = "medium"
                 a.textColor = CodableColor(red: 0.0, green: 1.0, blue: 0.0)
                 a.highlightColor = CodableColor(red: 0.0, green: 0.8, blue: 0.0, opacity: 0.3)
