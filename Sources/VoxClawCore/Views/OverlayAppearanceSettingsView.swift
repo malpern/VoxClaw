@@ -3,7 +3,6 @@ import SwiftUI
 public struct OverlayAppearanceSettingsView: View {
     @Bindable var settings: SettingsManager
     @State private var showCustomOptions = false
-    @State private var showAdvanced = false
 
     public init(settings: SettingsManager) {
         self.settings = settings
@@ -14,14 +13,6 @@ public struct OverlayAppearanceSettingsView: View {
         "Avenir", "Georgia", "Futura", "Palatino",
     ]
 
-    private let fontWeights: [(label: String, value: String)] = [
-        ("Light", "light"),
-        ("Regular", "regular"),
-        ("Medium", "medium"),
-        ("Semibold", "semibold"),
-        ("Bold", "bold"),
-    ]
-
     public var body: some View {
         Group {
             Section("Style Presets") {
@@ -29,8 +20,35 @@ public struct OverlayAppearanceSettingsView: View {
             }
 
             DisclosureGroup(isExpanded: $showCustomOptions, content: {
-                essentialsSection
-                advancedSection
+                Section {
+                    Picker("Font", selection: fontFamilyBinding) {
+                        ForEach(fontFamilies, id: \.self) { family in
+                            Text(family).tag(family)
+                        }
+                    }
+                    .accessibilityIdentifier(AccessibilityID.Appearance.fontPicker)
+
+                    HStack {
+                        Text("Size: \(Int(settings.overlayAppearance.fontSize))pt")
+                        Slider(value: fontSizeBinding, in: 16...64, step: 1)
+                            .accessibilityIdentifier(AccessibilityID.Appearance.fontSizeSlider)
+                    }
+
+                    ColorPicker("Text Color", selection: textColorBinding)
+                        .accessibilityIdentifier(AccessibilityID.Appearance.textColorPicker)
+
+                    ColorPicker("Highlight Color", selection: highlightColorBinding)
+                        .accessibilityIdentifier(AccessibilityID.Appearance.highlightColorPicker)
+
+                    ColorPicker("Background", selection: bgColorBinding)
+                        .accessibilityIdentifier(AccessibilityID.Appearance.bgColorPicker)
+
+                    HStack {
+                        Text("Background Opacity: \(Int(settings.overlayAppearance.backgroundColor.opacity * 100))%")
+                        Slider(value: bgOpacityBinding, in: 0.1...1.0, step: 0.05)
+                            .accessibilityIdentifier(AccessibilityID.Appearance.bgOpacitySlider)
+                    }
+                }
 
                 Button("Reset to Defaults") {
                     settings.overlayAppearance = .resetToDefaults()
@@ -47,114 +65,6 @@ public struct OverlayAppearanceSettingsView: View {
         }
     }
 
-    // MARK: - Essentials
-
-    private var essentialsSection: some View {
-        Section {
-            Picker("Font", selection: fontFamilyBinding) {
-                ForEach(fontFamilies, id: \.self) { family in
-                    Text(family).tag(family)
-                }
-            }
-            .accessibilityIdentifier(AccessibilityID.Appearance.fontPicker)
-
-            HStack {
-                Text("Size: \(Int(settings.overlayAppearance.fontSize))pt")
-                Slider(value: fontSizeBinding, in: 16...64, step: 1)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.fontSizeSlider)
-            }
-
-            ColorPicker("Text Color", selection: textColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.textColorPicker)
-
-            ColorPicker("Highlight Color", selection: highlightColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.highlightColorPicker)
-
-            ColorPicker("Background", selection: bgColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.bgColorPicker)
-
-            HStack {
-                Text("Background Opacity: \(Int(settings.overlayAppearance.backgroundColor.opacity * 100))%")
-                Slider(value: bgOpacityBinding, in: 0.1...1.0, step: 0.05)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.bgOpacitySlider)
-            }
-        }
-    }
-
-    // MARK: - Advanced
-
-    private var advancedSection: some View {
-        DisclosureGroup(isExpanded: $showAdvanced, content: {
-            Picker("Weight", selection: fontWeightBinding) {
-                ForEach(fontWeights, id: \.value) { weight in
-                    Text(weight.label).tag(weight.value)
-                }
-            }
-            .accessibilityIdentifier(AccessibilityID.Appearance.fontWeightPicker)
-
-            HStack {
-                Text("Line Spacing: \(Int(settings.overlayAppearance.lineSpacing))pt")
-                Slider(value: lineSpacingBinding, in: 0...20, step: 1)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.lineSpacingSlider)
-            }
-
-            HStack {
-                Text("Word Spacing: \(Int(settings.overlayAppearance.wordSpacing))pt")
-                Slider(value: wordSpacingBinding, in: 0...20, step: 1)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.wordSpacingSlider)
-            }
-
-            HStack {
-                Text("Past Word Opacity: \(Int(settings.overlayAppearance.pastWordOpacity * 100))%")
-                Slider(value: pastOpacityBinding, in: 0.0...1.0, step: 0.05)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.pastOpacitySlider)
-            }
-
-            HStack {
-                Text("Future Word Opacity: \(Int(settings.overlayAppearance.futureWordOpacity * 100))%")
-                Slider(value: futureOpacityBinding, in: 0.0...1.0, step: 0.05)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.futureOpacitySlider)
-            }
-
-            HStack {
-                Text("Panel Width: \(Int(settings.overlayAppearance.panelWidthFraction * 100))%")
-                Slider(value: panelWidthBinding, in: 0.2...0.8, step: 0.05)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.panelWidthSlider)
-            }
-
-            HStack {
-                Text("Panel Height: \(Int(settings.overlayAppearance.panelHeight))pt")
-                Slider(value: panelHeightBinding, in: 100...400, step: 10)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.panelHeightSlider)
-            }
-
-            HStack {
-                Text("H Padding: \(Int(settings.overlayAppearance.horizontalPadding))pt")
-                Slider(value: hPaddingBinding, in: 4...40, step: 2)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.hPaddingSlider)
-            }
-
-            HStack {
-                Text("V Padding: \(Int(settings.overlayAppearance.verticalPadding))pt")
-                Slider(value: vPaddingBinding, in: 4...40, step: 2)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.vPaddingSlider)
-            }
-
-            HStack {
-                Text("Corner Radius: \(Int(settings.overlayAppearance.cornerRadius))pt")
-                Slider(value: cornerRadiusBinding, in: 0...40, step: 2)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.cornerRadiusSlider)
-            }
-        }, label: {
-            Button {
-                withAnimation { showAdvanced.toggle() }
-            } label: {
-                Text("Advanced")
-            }
-            .buttonStyle(.plain)
-        })
-    }
-
     // MARK: - Bindings
 
     private var fontFamilyBinding: Binding<String> {
@@ -168,27 +78,6 @@ public struct OverlayAppearanceSettingsView: View {
         Binding(
             get: { Double(settings.overlayAppearance.fontSize) },
             set: { settings.overlayAppearance.fontSize = CGFloat($0) }
-        )
-    }
-
-    private var fontWeightBinding: Binding<String> {
-        Binding(
-            get: { settings.overlayAppearance.fontWeight },
-            set: { settings.overlayAppearance.fontWeight = $0 }
-        )
-    }
-
-    private var lineSpacingBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.lineSpacing) },
-            set: { settings.overlayAppearance.lineSpacing = CGFloat($0) }
-        )
-    }
-
-    private var wordSpacingBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.wordSpacing) },
-            set: { settings.overlayAppearance.wordSpacing = CGFloat($0) }
         )
     }
 
@@ -226,20 +115,6 @@ public struct OverlayAppearanceSettingsView: View {
         )
     }
 
-    private var pastOpacityBinding: Binding<Double> {
-        Binding(
-            get: { settings.overlayAppearance.pastWordOpacity },
-            set: { settings.overlayAppearance.pastWordOpacity = $0 }
-        )
-    }
-
-    private var futureOpacityBinding: Binding<Double> {
-        Binding(
-            get: { settings.overlayAppearance.futureWordOpacity },
-            set: { settings.overlayAppearance.futureWordOpacity = $0 }
-        )
-    }
-
     private var bgColorBinding: Binding<Color> {
         Binding(
             get: { Color(red: settings.overlayAppearance.backgroundColor.red,
@@ -261,41 +136,6 @@ public struct OverlayAppearanceSettingsView: View {
         Binding(
             get: { settings.overlayAppearance.backgroundColor.opacity },
             set: { settings.overlayAppearance.backgroundColor.opacity = $0 }
-        )
-    }
-
-    private var panelWidthBinding: Binding<Double> {
-        Binding(
-            get: { settings.overlayAppearance.panelWidthFraction },
-            set: { settings.overlayAppearance.panelWidthFraction = $0 }
-        )
-    }
-
-    private var panelHeightBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.panelHeight) },
-            set: { settings.overlayAppearance.panelHeight = CGFloat($0) }
-        )
-    }
-
-    private var hPaddingBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.horizontalPadding) },
-            set: { settings.overlayAppearance.horizontalPadding = CGFloat($0) }
-        )
-    }
-
-    private var vPaddingBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.verticalPadding) },
-            set: { settings.overlayAppearance.verticalPadding = CGFloat($0) }
-        )
-    }
-
-    private var cornerRadiusBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.overlayAppearance.cornerRadius) },
-            set: { settings.overlayAppearance.cornerRadius = CGFloat($0) }
         )
     }
 }
