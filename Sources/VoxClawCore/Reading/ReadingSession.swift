@@ -69,11 +69,11 @@ public final class ReadingSession: SpeechEngineDelegate {
             pausedExternalAudio = playbackController.pauseIfPlaying()
         }
 
+        showSpeedIndicator(settings?.voiceSpeed ?? 1.0)
+
         Log.session.info("Session.start: calling engine.start")
         await engine.start(text: text, words: words)
         Log.session.info("Session.start: engine.start returned")
-
-        showSpeedIndicator(settings?.voiceSpeed ?? 1.0)
     }
 
     public func togglePause() {
