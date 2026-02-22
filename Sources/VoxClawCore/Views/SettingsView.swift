@@ -223,7 +223,7 @@ struct SettingsView: View {
     }
 
     private var overlayAppearanceSection: some View {
-        Section("Overlay Appearance") {
+        Section {
             OverlayAppearanceSettingsView(settings: settings)
         }
     }

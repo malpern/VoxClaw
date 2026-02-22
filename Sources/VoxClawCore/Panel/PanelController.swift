@@ -146,33 +146,41 @@ final class PanelController {
 
     private func showQuickSettings() {
         if let existing = quickSettingsWindow {
-            existing.makeKeyAndOrderFront(nil)
+            existing.close()
+            quickSettingsWindow = nil
             return
         }
 
         let settingsView = OverlayQuickSettings(settings: settings)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 340),
-            styleMask: [.titled, .closable],
+        let window = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 260, height: 200),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        window.title = "Quick Settings"
-        window.contentView = NSHostingView(rootView: settingsView)
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.level = .floating
+        window.hidesOnDeactivate = false
         window.isReleasedWhenClosed = false
+        window.hasShadow = true
+        window.contentView = NSHostingView(rootView:
+            settingsView
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        )
 
         // Position near the panel
         if let panel {
             let panelFrame = panel.frame
             let x = panelFrame.maxX + 8
-            let y = panelFrame.midY - 170
+            let y = panelFrame.midY - 100
             window.setFrameOrigin(NSPoint(x: x, y: y))
         } else {
             window.center()
         }
 
-        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
         quickSettingsWindow = window
     }
 }
