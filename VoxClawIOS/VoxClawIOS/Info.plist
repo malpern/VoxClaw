@@ -6,6 +6,8 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>VoxClaw uses on-device speech recognition to synchronize word highlighting with audio playback.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>VoxClaw listens for text-to-speech requests from your Mac over the local network.</string>
 	<key>NSBonjourServices</key>

@@ -54,16 +54,15 @@ final class AudioPlayer {
         isPlaying = true
     }
 
-    func scheduleChunk(_ pcmData: Data) {
+    /// Convert 16-bit signed LE PCM data to a Float32 `AVAudioPCMBuffer`.
+    nonisolated static func pcmBuffer(from pcmData: Data, format: AVAudioFormat) -> AVAudioPCMBuffer? {
         let sampleCount = pcmData.count / 2 // 16-bit = 2 bytes per sample
-
-        guard sampleCount > 0, let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(sampleCount)) else {
-            return
+        guard sampleCount > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(sampleCount)) else {
+            return nil
         }
-
         buffer.frameLength = AVAudioFrameCount(sampleCount)
 
-        // Convert Int16 LE PCM to Float32
         let floatData = buffer.floatChannelData![0]
         pcmData.withUnsafeBytes { rawBuffer in
             let int16Buffer = rawBuffer.bindMemory(to: Int16.self)
@@ -71,9 +70,14 @@ final class AudioPlayer {
                 floatData[i] = Float(int16Buffer[i]) / Float(Int16.max)
             }
         }
+        return buffer
+    }
+
+    func scheduleChunk(_ pcmData: Data) {
+        guard let buffer = Self.pcmBuffer(from: pcmData, format: format) else { return }
 
         totalBytesScheduled += pcmData.count
-        Log.audio.debug("Scheduled chunk: \(sampleCount, privacy: .public) samples, totalDuration=\(self.totalDuration, privacy: .public)s")
+        Log.audio.debug("Scheduled chunk: \(buffer.frameLength, privacy: .public) samples, totalDuration=\(self.totalDuration, privacy: .public)s")
         playerNode.scheduleBuffer(buffer)
     }
 

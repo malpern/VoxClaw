@@ -41,16 +41,29 @@ public final class OpenAISpeechEngine: SpeechEngine {
             timings = WordTimingEstimator.estimate(words: words, totalDuration: heuristicDuration)
             startDisplayLink()
 
-            // Stream audio
+            // Stream audio, feeding chunks to both player and speech aligner
+            let aligner = SpeechAligner(words: words)
             let stream = await ttsService.streamPCM(text: text)
             for try await chunk in stream {
                 player.scheduleChunk(chunk)
+                aligner.appendChunk(chunk)
             }
+            aligner.finishAudio()
 
-            // Recalculate with real duration
+            // Use recognizer timings if available, otherwise fall back to heuristic
             let realDuration = player.totalDuration
-            if realDuration > 0 {
-                Log.tts.info("Real duration: \(realDuration, privacy: .public)s (heuristic was \(heuristicDuration, privacy: .public)s)")
+            if aligner.isAvailable {
+                await aligner.awaitCompletion(timeout: 3.0)
+                let alignedTimings = aligner.timings
+                if !alignedTimings.isEmpty {
+                    Log.tts.info("Using speech-aligned timings (\(alignedTimings.count) words)")
+                    timings = alignedTimings
+                } else if realDuration > 0 {
+                    Log.tts.info("Aligner produced no timings, falling back to heuristic (duration: \(realDuration, privacy: .public)s)")
+                    timings = WordTimingEstimator.estimate(words: words, totalDuration: realDuration)
+                }
+            } else if realDuration > 0 {
+                Log.tts.info("Speech aligner unavailable, using heuristic (duration: \(realDuration, privacy: .public)s)")
                 timings = WordTimingEstimator.estimate(words: words, totalDuration: realDuration)
             }
 
