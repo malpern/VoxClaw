@@ -117,7 +117,11 @@ struct SettingsView: View {
 
             HStack {
                 Text("Speed: \(settings.voiceSpeed, specifier: "%.1f")x")
+                    .fontWeight(settings.voiceSpeed == 1.0 ? .semibold : .regular)
                 Slider(value: $settings.voiceSpeed, in: 0.5...3.0, step: 0.1)
+                    .onChange(of: settings.voiceSpeed) { _, new in
+                        if abs(new - 1.0) < 0.06 { settings.voiceSpeed = 1.0 }
+                    }
             }
             .accessibilityIdentifier(AccessibilityID.Settings.voiceEnginePicker + "Speed")
 
