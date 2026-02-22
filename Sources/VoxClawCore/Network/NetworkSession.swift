@@ -2,27 +2,7 @@ import Foundation
 import Network
 import os
 
-/// Parsed payload from a POST /read request.
-public struct ReadRequest: Sendable {
-    public let text: String
-    public var voice: String?
-    public var rate: Float?
-    public var instructions: String?
-
-    public init(text: String, voice: String? = nil, rate: Float? = nil, instructions: String? = nil) {
-        self.text = text
-        self.voice = voice
-        self.rate = rate
-        self.instructions = instructions
-    }
-}
-
 final class NetworkSession: Sendable {
-    /// Maximum allowed request size (1 MB). Requests exceeding this are rejected with 413.
-    static let maxRequestSize = 1_000_000
-    /// Maximum allowed text length in characters.
-    static let maxTextLength = 50_000
-
     private let connection: NWConnection
     private let onReadRequest: @Sendable (ReadRequest) async -> Void
     private let statusProvider: @Sendable () async -> (reading: Bool, state: String, wordCount: Int, port: UInt16, lanIP: String?, autoClosedInstancesOnLaunch: Int)
@@ -55,36 +35,23 @@ final class NetworkSession: Sendable {
                 return
             }
 
-            // Parse the HTTP request line
-            let lines = raw.components(separatedBy: "\r\n")
-            guard let requestLine = lines.first else {
-                sendErrorResponse(status: 400, message: "Empty request")
-                return
-            }
-
-            let parts = requestLine.split(separator: " ", maxSplits: 2)
-            guard parts.count >= 2 else {
+            guard let (method, path) = HTTPRequestParser.parseRequestLine(from: raw) else {
                 sendErrorResponse(status: 400, message: "Malformed request line")
                 return
             }
 
-            let method = String(parts[0])
-            let path = String(parts[1])
-
             Log.network.debug("Request: \(method, privacy: .public) \(path, privacy: .public)")
 
-            // Route the request
-            switch (method, path) {
-            case ("GET", "/status"):
+            switch HTTPRequestParser.route(method: method, path: path) {
+            case .status:
                 Task { await self.handleStatus() }
-            case ("POST", "/read"):
+            case .read:
                 handleRead(raw: raw, initialData: data)
-            case ("GET", "/claw"):
+            case .claw:
                 handleClaw()
-            case ("OPTIONS", _):
-                // CORS preflight
+            case .corsPreflight:
                 sendResponse(status: 204, body: nil)
-            default:
+            case .notFound:
                 Log.network.info("404: \(method, privacy: .public) \(path, privacy: .public)")
                 sendErrorResponse(status: 404, message: "Not found. Use POST /read or GET /status")
             }
@@ -121,19 +88,15 @@ final class NetworkSession: Sendable {
     }
 
     private func handleRead(raw: String, initialData: Data) {
-        // Find Content-Length header
-        let contentLength = Self.parseContentLength(from: raw)
+        let contentLength = HTTPRequestParser.parseContentLength(from: raw)
 
-        // Reject early if declared size exceeds limit
-        if let contentLength, contentLength > Self.maxRequestSize {
+        if let contentLength, contentLength > HTTPRequestParser.maxRequestSize {
             Log.network.warning("Content-Length too large: \(contentLength, privacy: .public) bytes")
-            sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(Self.maxRequestSize / 1_000_000) MB.")
+            sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(HTTPRequestParser.maxRequestSize / 1_000_000) MB.")
             return
         }
 
-        // Split headers from body
         guard let headerEndRange = raw.range(of: "\r\n\r\n") else {
-            // Haven't received full headers yet, keep reading
             receiveMoreData(accumulated: initialData)
             return
         }
@@ -143,11 +106,9 @@ final class NetworkSession: Sendable {
         let bodyBytes = initialData.count - headerByteCount
 
         if let contentLength, bodyBytes < contentLength {
-            // Need to read more body data
             let remaining = contentLength - bodyBytes
             receiveBody(accumulated: initialData, remaining: remaining)
         } else {
-            // We have the full request
             processFullRequest(data: initialData)
         }
     }
@@ -161,9 +122,9 @@ final class NetworkSession: Sendable {
             var combined = accumulated
             combined.append(data)
 
-            if combined.count > Self.maxRequestSize {
+            if combined.count > HTTPRequestParser.maxRequestSize {
                 Log.network.warning("Request too large: \(combined.count, privacy: .public) bytes")
-                sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(Self.maxRequestSize / 1_000_000) MB.")
+                sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(HTTPRequestParser.maxRequestSize / 1_000_000) MB.")
                 return
             }
 
@@ -175,7 +136,7 @@ final class NetworkSession: Sendable {
                    let headerEndRange = raw.range(of: "\r\n\r\n") {
                     let headerByteCount = raw[raw.startIndex..<headerEndRange.lowerBound].utf8.count + 4
                     let bodyBytes = combined.count - headerByteCount
-                    let contentLength = Self.parseContentLength(from: raw)
+                    let contentLength = HTTPRequestParser.parseContentLength(from: raw)
 
                     if contentLength == nil || bodyBytes >= (contentLength ?? 0) {
                         processFullRequest(data: combined)
@@ -196,9 +157,9 @@ final class NetworkSession: Sendable {
             var combined = accumulated
             combined.append(data)
 
-            if combined.count > Self.maxRequestSize {
+            if combined.count > HTTPRequestParser.maxRequestSize {
                 Log.network.warning("Request too large: \(combined.count, privacy: .public) bytes")
-                sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(Self.maxRequestSize / 1_000_000) MB.")
+                sendErrorResponse(status: 413, message: "Request too large. Maximum size is \(HTTPRequestParser.maxRequestSize / 1_000_000) MB.")
                 return
             }
 
@@ -219,16 +180,16 @@ final class NetworkSession: Sendable {
             return
         }
 
-        let body = Self.extractBody(from: raw)
-        guard let request = Self.parseReadRequest(from: body), !request.text.isEmpty else {
+        let body = HTTPRequestParser.extractBody(from: raw)
+        guard let request = HTTPRequestParser.parseReadRequest(from: body), !request.text.isEmpty else {
             Log.network.info("400: empty text body")
             sendErrorResponse(status: 400, message: "No text provided. Send JSON {\"text\":\"...\", \"voice\":\"nova\", \"rate\":1.5, \"instructions\":\"...\"} or plain text body.")
             return
         }
 
-        if request.text.count > Self.maxTextLength {
+        if request.text.count > HTTPRequestParser.maxTextLength {
             Log.network.info("400: text too long (\(request.text.count, privacy: .public) chars)")
-            sendErrorResponse(status: 400, message: "Text too long. Maximum length is \(Self.maxTextLength) characters (got \(request.text.count)).")
+            sendErrorResponse(status: 400, message: "Text too long. Maximum length is \(HTTPRequestParser.maxTextLength) characters (got \(request.text.count)).")
             return
         }
 
@@ -246,29 +207,6 @@ final class NetworkSession: Sendable {
         Task {
             await onReadRequest(finalRequest)
         }
-    }
-
-    static func extractBody(from raw: String) -> String {
-        guard let range = raw.range(of: "\r\n\r\n") else { return "" }
-        return String(raw[range.upperBound...])
-    }
-
-    static func parseReadRequest(from body: String) -> ReadRequest? {
-        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        // Try JSON: {"text": "...", "voice": "nova", "rate": 1.5, "instructions": "..."}
-        if let jsonData = trimmed.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-           let text = json["text"] as? String {
-            let voice = json["voice"] as? String
-            let rate = (json["rate"] as? NSNumber)?.floatValue
-            let instructions = json["instructions"] as? String
-            return ReadRequest(text: text, voice: voice, rate: rate, instructions: instructions)
-        }
-
-        // Fall back to plain text body
-        return ReadRequest(text: trimmed)
     }
 
     // MARK: - Easter Eggs
@@ -309,17 +247,6 @@ final class NetworkSession: Sendable {
     }
 
     // MARK: - HTTP Helpers
-
-    static func parseContentLength(from raw: String) -> Int? {
-        for line in raw.components(separatedBy: "\r\n") {
-            let lower = line.lowercased()
-            if lower.hasPrefix("content-length:") {
-                let value = line.dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)
-                return Int(value)
-            }
-        }
-        return nil
-    }
 
     private func sendResponse(status: Int, body: String?, contentType: String = "application/json") {
         let statusText: String
