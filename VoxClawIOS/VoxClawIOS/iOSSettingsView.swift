@@ -44,15 +44,8 @@ struct iOSSettingsView: View {
                     voicePreview.play(
                         voice: newVoice,
                         apiKey: settings.openAIAPIKey,
-                        instructions: settings.readingStyle.isEmpty ? nil : settings.readingStyle
+                        instructions: nil
                     )
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("Reading Style", text: $settings.readingStyle, prompt: Text("e.g. Read warmly"))
-                    Text("Natural language instructions for voice style.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
                 }
 
                 apiKeySection

@@ -14,6 +14,7 @@ public final class ReadingSession: SpeechEngineDelegate {
     private var pausedExternalAudio = false
     private var isFinalized = false
     private var finishTask: Task<Void, Never>?
+    private var feedbackTask: Task<Void, Never>?
 
     public init(
         appState: AppState,
@@ -211,7 +212,8 @@ public final class ReadingSession: SpeechEngineDelegate {
 
     private func showFeedback(_ text: String) {
         appState.feedbackText = text
-        Task { @MainActor [weak self] in
+        feedbackTask?.cancel()
+        feedbackTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(800))
             if self?.appState.feedbackText == text {
                 self?.appState.feedbackText = nil

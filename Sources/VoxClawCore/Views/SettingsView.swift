@@ -136,29 +136,25 @@ struct SettingsView: View {
                     voicePreview.play(
                         voice: newVoice,
                         apiKey: settings.openAIAPIKey,
-                        instructions: settings.readingStyle.isEmpty ? nil : settings.readingStyle
+                        instructions: nil
                     )
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("Reading Style", text: $settings.readingStyle, prompt: Text("e.g. Read warmly and conversationally"))
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityIdentifier(AccessibilityID.Settings.readingStyleField)
-                    Text("Natural language instructions for OpenAI voice style. Leave empty for default.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
                 HStack {
-                    Text(maskedAPIKey)
+                    Text("API Key Saved (\(maskedAPIKeySuffix))")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier(AccessibilityID.Settings.apiKeyDisplay)
                     Spacer()
-                    Button("Remove Key", role: .destructive) {
+                    Button {
                         settings.openAIAPIKey = ""
                         settings.voiceEngine = .apple
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
                     }
+                    .buttonStyle(.plain)
+                    .help("Remove API Key")
                     .accessibilityIdentifier(AccessibilityID.Settings.removeAPIKey)
                 }
             }
@@ -214,10 +210,10 @@ struct SettingsView: View {
         .frame(width: 400)
     }
 
-    private var maskedAPIKey: String {
+    private var maskedAPIKeySuffix: String {
         let key = settings.openAIAPIKey
-        guard key.count > 6 else { return "sk-..." }
-        return "\(key.prefix(3))...\(key.suffix(4))"
+        guard key.count >= 4 else { return "..." }
+        return String(key.suffix(4))
     }
 
     private var overlayAppearanceSection: some View {

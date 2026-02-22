@@ -58,17 +58,21 @@ final class PanelController {
         )
         panel.contentView = hostingView
 
-        // Start off-screen for slide-down animation
-        let startY = panelY + panelHeight + 20
-        panel.setFrameOrigin(NSPoint(x: panelX, y: startY))
+        // Start scaled down and transparent for materialize animation
+        let scaleFactor: CGFloat = 0.92
+        let scaledWidth = panelWidth * scaleFactor
+        let scaledHeight = panelHeight * scaleFactor
+        let startX = panelX + (panelWidth - scaledWidth) / 2
+        let startY = panelY + (panelHeight - scaledHeight) / 2 + 12
+        panel.setFrame(NSRect(x: startX, y: startY, width: scaledWidth, height: scaledHeight), display: false)
         panel.alphaValue = 0
         panel.orderFrontRegardless()
 
-        // Slide down + fade in
+        // Scale up + fade in (materialize)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.35
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().setFrameOrigin(NSPoint(x: panelX, y: panelY))
+            panel.animator().setFrame(NSRect(x: panelX, y: panelY, width: panelWidth, height: panelHeight), display: true)
             panel.animator().alphaValue = 1
         }
 
@@ -90,12 +94,16 @@ final class PanelController {
         }
 
         let frame = panel.frame
-        let targetY = frame.origin.y + frame.height + 20
+        let scaleFactor: CGFloat = 0.92
+        let targetWidth = frame.width * scaleFactor
+        let targetHeight = frame.height * scaleFactor
+        let targetX = frame.origin.x + (frame.width - targetWidth) / 2
+        let targetY = frame.origin.y + (frame.height - targetHeight) / 2 + 12
 
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.3
+            context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            panel.animator().setFrameOrigin(NSPoint(x: frame.origin.x, y: targetY))
+            panel.animator().setFrame(NSRect(x: targetX, y: targetY, width: targetWidth, height: targetHeight), display: true)
             panel.animator().alphaValue = 0
         }, completionHandler: {
             Task { @MainActor [weak self] in
