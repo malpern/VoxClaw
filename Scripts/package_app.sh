@@ -175,14 +175,23 @@ fi
 # Code sign.
 APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-$BASE_ENTITLEMENTS}"
 if [[ "$SIGNING_MODE" == "adhoc" || -z "$APP_IDENTITY" ]]; then
+  # Ad-hoc signing: strip team-specific entitlements that require Developer ID.
+  ADHOC_ENTITLEMENTS=$(mktemp)
+  trap "rm -f '$ADHOC_ENTITLEMENTS'" EXIT
+  /usr/libexec/PlistBuddy -c "Print" "$APP_ENTITLEMENTS" >/dev/null 2>&1
+  cp "$APP_ENTITLEMENTS" "$ADHOC_ENTITLEMENTS"
+  /usr/libexec/PlistBuddy -c "Delete :com.apple.application-identifier" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.ubiquity-kvstore-identifier" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
   CODESIGN_ARGS=(--force --sign "-")
+  codesign "${CODESIGN_ARGS[@]}" \
+    --entitlements "$ADHOC_ENTITLEMENTS" \
+    "$APP"
 else
   CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$APP_IDENTITY")
+  codesign "${CODESIGN_ARGS[@]}" \
+    --entitlements "$APP_ENTITLEMENTS" \
+    "$APP"
 fi
-
-codesign "${CODESIGN_ARGS[@]}" \
-  --entitlements "$APP_ENTITLEMENTS" \
-  "$APP"
 
 echo "Created $APP (${MARKETING_VERSION} build ${BUILD_NUMBER}, ${GIT_COMMIT})"
 
