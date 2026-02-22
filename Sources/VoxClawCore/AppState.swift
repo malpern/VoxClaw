@@ -2,15 +2,15 @@ import Foundation
 import SwiftUI
 
 extension Notification.Name {
-    static let voxClawOpenAIAuthFailed = Notification.Name("voxclaw.openaiAuthFailed")
-    static let voxClawOpenAIKeyMissing = Notification.Name("voxclaw.openaiKeyMissing")
+    public static let voxClawOpenAIAuthFailed = Notification.Name("voxclaw.openaiAuthFailed")
+    public static let voxClawOpenAIKeyMissing = Notification.Name("voxclaw.openaiKeyMissing")
 }
 
-enum VoxClawNotificationUserInfo {
-    static let openAIAuthErrorMessage = "openaiAuthErrorMessage"
+public enum VoxClawNotificationUserInfo {
+    public static let openAIAuthErrorMessage = "openaiAuthErrorMessage"
 }
 
-enum SessionState: Sendable {
+public enum SessionState: Sendable {
     case idle
     case loading
     case playing
@@ -20,18 +20,18 @@ enum SessionState: Sendable {
 
 @Observable
 @MainActor
-final class AppState {
-    var sessionState: SessionState = .idle
-    var words: [String] = []
-    var currentWordIndex: Int = 0
-    var isPaused: Bool = false
-    var audioOnly: Bool = false
-    var isListening: Bool = false
-    var feedbackText: String? = nil
-    var inputText: String = ""
-    var autoClosedInstancesOnLaunch: Int = 0
+public final class AppState {
+    public var sessionState: SessionState = .idle
+    public var words: [String] = []
+    public var currentWordIndex: Int = 0
+    public var isPaused: Bool = false
+    public var audioOnly: Bool = false
+    public var isListening: Bool = false
+    public var feedbackText: String? = nil
+    public var inputText: String = ""
+    public var autoClosedInstancesOnLaunch: Int = 0
 
-    var isActive: Bool {
+    public var isActive: Bool {
         switch sessionState {
         case .playing, .paused, .loading:
             return true
@@ -40,7 +40,9 @@ final class AppState {
         }
     }
 
-    func reset() {
+    public init() {}
+
+    public func reset() {
         sessionState = .idle
         words = []
         currentWordIndex = 0

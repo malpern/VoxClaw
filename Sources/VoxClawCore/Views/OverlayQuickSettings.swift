@@ -1,10 +1,14 @@
 import SwiftUI
 
-struct OverlayQuickSettings: View {
+public struct OverlayQuickSettings: View {
     @Bindable var settings: SettingsManager
     @State private var showCustom = false
 
-    var body: some View {
+    public init(settings: SettingsManager) {
+        self.settings = settings
+    }
+
+    public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Quick Settings")
                 .font(.headline)
@@ -101,11 +105,11 @@ struct OverlayQuickSettings: View {
                          green: settings.overlayAppearance.textColor.green,
                          blue: settings.overlayAppearance.textColor.blue) },
             set: { newColor in
-                let nsColor = NSColor(newColor).usingColorSpace(.sRGB) ?? NSColor(newColor)
+                let resolved = CodableColor(newColor)
                 settings.overlayAppearance.textColor = CodableColor(
-                    red: Double(nsColor.redComponent),
-                    green: Double(nsColor.greenComponent),
-                    blue: Double(nsColor.blueComponent),
+                    red: resolved.red,
+                    green: resolved.green,
+                    blue: resolved.blue,
                     opacity: settings.overlayAppearance.textColor.opacity
                 )
             }
@@ -118,11 +122,11 @@ struct OverlayQuickSettings: View {
                          green: settings.overlayAppearance.highlightColor.green,
                          blue: settings.overlayAppearance.highlightColor.blue) },
             set: { newColor in
-                let nsColor = NSColor(newColor).usingColorSpace(.sRGB) ?? NSColor(newColor)
+                let resolved = CodableColor(newColor)
                 settings.overlayAppearance.highlightColor = CodableColor(
-                    red: Double(nsColor.redComponent),
-                    green: Double(nsColor.greenComponent),
-                    blue: Double(nsColor.blueComponent),
+                    red: resolved.red,
+                    green: resolved.green,
+                    blue: resolved.blue,
                     opacity: settings.overlayAppearance.highlightColor.opacity
                 )
             }

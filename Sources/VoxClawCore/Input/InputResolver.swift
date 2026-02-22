@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Foundation
 import os
@@ -72,3 +73,4 @@ enum InputResolver {
 private extension Int32 {
     var boolValue: Bool { self != 0 }
 }
+#endif

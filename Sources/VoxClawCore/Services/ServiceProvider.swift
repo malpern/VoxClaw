@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import os
 
@@ -29,3 +30,4 @@ final class VoxClawServiceProvider: NSObject {
         }
     }
 }
+#endif

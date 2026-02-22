@@ -1,3 +1,4 @@
+#if os(macOS)
 import AVFoundation
 import AppKit
 import SwiftUI
@@ -920,3 +921,4 @@ private final class SynthFinishDelegate: NSObject, AVSpeechSynthesizerDelegate, 
         onFinish()
     }
 }
+#endif

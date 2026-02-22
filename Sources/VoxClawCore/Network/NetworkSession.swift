@@ -3,11 +3,18 @@ import Network
 import os
 
 /// Parsed payload from a POST /read request.
-struct ReadRequest: Sendable {
-    let text: String
-    var voice: String?
-    var rate: Float?
-    var instructions: String?
+public struct ReadRequest: Sendable {
+    public let text: String
+    public var voice: String?
+    public var rate: Float?
+    public var instructions: String?
+
+    public init(text: String, voice: String? = nil, rate: Float? = nil, instructions: String? = nil) {
+        self.text = text
+        self.voice = voice
+        self.rate = rate
+        self.instructions = instructions
+    }
 }
 
 final class NetworkSession: Sendable {

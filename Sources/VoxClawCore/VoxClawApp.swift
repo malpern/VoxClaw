@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import os
 import SwiftUI
@@ -420,3 +421,4 @@ final class AppCoordinator {
         }
     }
 }
+#endif

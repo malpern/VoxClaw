@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppIntents
 import os
 
@@ -45,3 +46,4 @@ struct VoxClawShortcuts: AppShortcutsProvider {
         )
     }
 }
+#endif

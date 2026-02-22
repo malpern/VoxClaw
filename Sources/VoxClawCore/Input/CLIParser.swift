@@ -1,3 +1,4 @@
+#if os(macOS)
 import ArgumentParser
 import Foundation
 import Synchronization
@@ -272,3 +273,4 @@ final class CLIContext: Sendable {
         self.instructions = instructions
     }
 }
+#endif

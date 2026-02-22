@@ -1,3 +1,4 @@
+#if os(macOS)
 import AVFoundation
 import SwiftUI
 
@@ -12,8 +13,8 @@ struct SettingsView: View {
         ScrollView {
             Form {
                 agentSetupSection
-                voiceSection
                 overlayAppearanceSection
+                voiceSection
                 controlsSection
                 readOnlyDataSection
             }
@@ -118,7 +119,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                DisclosureGroup("OpenAI Setup", isExpanded: $showOpenAISetup) {
+                DisclosureGroup(isExpanded: $showOpenAISetup, content: {
                     VStack(alignment: .leading, spacing: 10) {
                         if settings.isOpenAIConfigured {
                             Label("API key saved in Keychain", systemImage: "checkmark.circle.fill")
@@ -159,7 +160,14 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 6)
-                }
+                }, label: {
+                    Button {
+                        withAnimation { showOpenAISetup.toggle() }
+                    } label: {
+                        Text("OpenAI Setup")
+                    }
+                    .buttonStyle(.plain)
+                })
             }
         }
     }
@@ -257,3 +265,4 @@ struct SettingsView: View {
 
     private let openAIVoices = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"]
 }
+#endif

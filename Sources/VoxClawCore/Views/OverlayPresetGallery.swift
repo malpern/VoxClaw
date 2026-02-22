@@ -3,14 +3,19 @@ import SwiftUI
 /// Horizontal scrolling gallery of overlay style presets.
 ///
 /// Use `compact: true` for the narrow quick-settings popover.
-struct OverlayPresetGallery: View {
+public struct OverlayPresetGallery: View {
     @Bindable var settings: SettingsManager
     var compact: Bool = false
 
-    private var cardWidth: CGFloat { compact ? 70 : 100 }
-    private var cardHeight: CGFloat { compact ? 50 : 70 }
+    public init(settings: SettingsManager, compact: Bool = false) {
+        self.settings = settings
+        self.compact = compact
+    }
 
-    var body: some View {
+    private var cardWidth: CGFloat { compact ? 91 : 100 }
+    private var cardHeight: CGFloat { compact ? 65 : 70 }
+
+    public var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(OverlayPreset.all) { preset in
@@ -37,7 +42,7 @@ struct OverlayPresetGallery: View {
                         .fill(appearance.backgroundColor.color)
 
                     Text("The quick brown")
-                        .font(.custom(appearance.fontFamily, size: compact ? 7 : 9))
+                        .font(.custom(appearance.fontFamily, size: compact ? 9 : 9))
                         .fontWeight(appearance.fontWeightValue)
                         .foregroundStyle(appearance.textColor.color)
                         .lineLimit(1)
@@ -54,7 +59,7 @@ struct OverlayPresetGallery: View {
 
                 // Name
                 Text(preset.name)
-                    .font(compact ? .system(size: 9) : .caption2)
+                    .font(compact ? .system(size: 11) : .caption2)
                     .foregroundStyle(isSelected ? Color.accentColor : .secondary)
                     .lineLimit(1)
             }

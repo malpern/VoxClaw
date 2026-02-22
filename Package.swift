@@ -5,7 +5,11 @@ import PackageDescription
 let package = Package(
     name: "VoxClaw",
     platforms: [
-        .macOS(.v26)
+        .macOS(.v26),
+        .iOS(.v26),
+    ],
+    products: [
+        .library(name: "VoxClawCore", targets: ["VoxClawCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
@@ -14,7 +18,7 @@ let package = Package(
         .target(
             name: "VoxClawCore",
             dependencies: [
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser", condition: .when(platforms: [.macOS])),
             ],
             path: "Sources/VoxClawCore",
             exclude: ["Resources"],

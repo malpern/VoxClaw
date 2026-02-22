@@ -1,15 +1,20 @@
 import SwiftUI
 
-struct FlowLayout: Layout {
-    var hSpacing: CGFloat = 6
-    var vSpacing: CGFloat = 6
+public struct FlowLayout: Layout {
+    public var hSpacing: CGFloat
+    public var vSpacing: CGFloat
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    public init(hSpacing: CGFloat = 6, vSpacing: CGFloat = 6) {
+        self.hSpacing = hSpacing
+        self.vSpacing = vSpacing
+    }
+
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = arrange(proposal: proposal, subviews: subviews)
         return result.size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let result = arrange(proposal: proposal, subviews: subviews)
 
         for (index, position) in result.positions.enumerated() {

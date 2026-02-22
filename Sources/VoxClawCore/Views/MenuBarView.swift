@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import os
 import SwiftUI
@@ -144,3 +145,4 @@ struct MenuBarView: View {
         }
     }
 }
+#endif

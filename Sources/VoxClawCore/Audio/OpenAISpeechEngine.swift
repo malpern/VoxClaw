@@ -2,9 +2,9 @@ import Foundation
 import os
 
 @MainActor
-final class OpenAISpeechEngine: SpeechEngine {
-    weak var delegate: SpeechEngineDelegate?
-    private(set) var state: SpeechEngineState = .idle
+public final class OpenAISpeechEngine: SpeechEngine {
+    public weak var delegate: SpeechEngineDelegate?
+    public private(set) var state: SpeechEngineState = .idle
 
     private let apiKey: String
     private let voice: String
@@ -15,14 +15,14 @@ final class OpenAISpeechEngine: SpeechEngine {
     private var words: [String] = []
     private var displayLink: Timer?
 
-    init(apiKey: String, voice: String = "onyx", speed: Float = 1.0, instructions: String? = nil) {
+    public init(apiKey: String, voice: String = "onyx", speed: Float = 1.0, instructions: String? = nil) {
         self.apiKey = apiKey
         self.voice = voice
         self.speed = speed
         self.instructions = instructions
     }
 
-    func start(text: String, words: [String]) async {
+    public func start(text: String, words: [String]) async {
         self.words = words
         state = .loading
         delegate?.speechEngine(self, didChangeState: .loading)
@@ -65,21 +65,21 @@ final class OpenAISpeechEngine: SpeechEngine {
         }
     }
 
-    func pause() {
+    public func pause() {
         audioPlayer?.pause()
         stopDisplayLink()
         state = .paused
         delegate?.speechEngine(self, didChangeState: .paused)
     }
 
-    func resume() {
+    public func resume() {
         audioPlayer?.resume()
         startDisplayLink()
         state = .playing
         delegate?.speechEngine(self, didChangeState: .playing)
     }
 
-    func stop() {
+    public func stop() {
         stopDisplayLink()
         audioPlayer?.stop()
         state = .idle

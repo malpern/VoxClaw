@@ -3,9 +3,9 @@ import os
 
 /// Wraps a primary engine and retries once with a fallback engine if the primary errors.
 @MainActor
-final class FallbackSpeechEngine: SpeechEngine, SpeechEngineDelegate {
-    weak var delegate: SpeechEngineDelegate?
-    private(set) var state: SpeechEngineState = .idle
+public final class FallbackSpeechEngine: SpeechEngine, SpeechEngineDelegate {
+    public weak var delegate: SpeechEngineDelegate?
+    public private(set) var state: SpeechEngineState = .idle
 
     private let primary: any SpeechEngine
     private let fallback: any SpeechEngine
@@ -14,7 +14,7 @@ final class FallbackSpeechEngine: SpeechEngine, SpeechEngineDelegate {
     private var lastText = ""
     private var lastWords: [String] = []
 
-    init(primary: any SpeechEngine, fallback: any SpeechEngine) {
+    public init(primary: any SpeechEngine, fallback: any SpeechEngine) {
         self.primary = primary
         self.fallback = fallback
         self.active = primary
@@ -22,7 +22,7 @@ final class FallbackSpeechEngine: SpeechEngine, SpeechEngineDelegate {
         self.fallback.delegate = self
     }
 
-    func start(text: String, words: [String]) async {
+    public func start(text: String, words: [String]) async {
         lastText = text
         lastWords = words
         didFallback = false
@@ -32,38 +32,38 @@ final class FallbackSpeechEngine: SpeechEngine, SpeechEngineDelegate {
         await primary.start(text: text, words: words)
     }
 
-    func pause() {
+    public func pause() {
         active.pause()
     }
 
-    func resume() {
+    public func resume() {
         active.resume()
     }
 
-    func stop() {
+    public func stop() {
         active.stop()
     }
 
     // MARK: - SpeechEngineDelegate passthrough
 
-    func speechEngine(_ engine: any SpeechEngine, didUpdateWordIndex index: Int) {
+    public func speechEngine(_ engine: any SpeechEngine, didUpdateWordIndex index: Int) {
         guard isActive(engine) else { return }
         delegate?.speechEngine(self, didUpdateWordIndex: index)
     }
 
-    func speechEngineDidFinish(_ engine: any SpeechEngine) {
+    public func speechEngineDidFinish(_ engine: any SpeechEngine) {
         guard isActive(engine) else { return }
         state = .finished
         delegate?.speechEngineDidFinish(self)
     }
 
-    func speechEngine(_ engine: any SpeechEngine, didChangeState state: SpeechEngineState) {
+    public func speechEngine(_ engine: any SpeechEngine, didChangeState state: SpeechEngineState) {
         guard isActive(engine) else { return }
         self.state = state
         delegate?.speechEngine(self, didChangeState: state)
     }
 
-    func speechEngine(_ engine: any SpeechEngine, didEncounterError error: Error) {
+    public func speechEngine(_ engine: any SpeechEngine, didEncounterError error: Error) {
         guard isActive(engine) else { return }
 
         if !didFallback, isPrimary(engine) {

@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 import os
 
@@ -51,3 +52,4 @@ enum ModeDetector {
         Bundle.main.bundlePath.hasSuffix(".app")
     }
 }
+#endif

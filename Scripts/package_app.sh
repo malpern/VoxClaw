@@ -159,29 +159,21 @@ chmod -R u+w "$APP"
 xattr -cr "$APP"
 find "$APP" -name '._*' -delete
 
-# Generate entitlements.
-ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
-APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements}"
-mkdir -p "$ENTITLEMENTS_DIR"
+# Entitlements — start from the checked-in base file.
+BASE_ENTITLEMENTS="${ROOT}/Sources/VoxClawCore/Resources/VoxClaw.entitlements"
+if [[ ! -f "$BASE_ENTITLEMENTS" ]]; then
+  echo "ERROR: Entitlements file not found: $BASE_ENTITLEMENTS" >&2
+  exit 1
+fi
 
-if [[ ! -f "$APP_ENTITLEMENTS" ]]; then
-  cat > "$APP_ENTITLEMENTS" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.network.client</key>
-    <true/>
-    <key>com.apple.security.network.server</key>
-    <true/>
-    <key>com.apple.security.device.audio-input</key>
-    <true/>
-</dict>
-</plist>
-PLIST
+# Embed provisioning profile for Developer ID builds (needed for iCloud KVS).
+PROVISION_PROFILE="${ROOT}/Sources/VoxClawCore/Resources/embedded.provisionprofile"
+if [[ -f "$PROVISION_PROFILE" && ("$SIGNING_MODE" != "adhoc" && -n "$APP_IDENTITY") ]]; then
+  cp "$PROVISION_PROFILE" "$APP/Contents/embedded.provisionprofile"
 fi
 
 # Code sign.
+APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-$BASE_ENTITLEMENTS}"
 if [[ "$SIGNING_MODE" == "adhoc" || -z "$APP_IDENTITY" ]]; then
   CODESIGN_ARGS=(--force --sign "-")
 else

@@ -62,7 +62,9 @@ struct FloatingPanelView: View {
                             .glassEffect(.regular.interactive(), in: .circle)
                     }
                     .buttonStyle(.plain)
+                    #if os(macOS)
                     .help("Overlay Settings")
+                    #endif
                     .accessibilityIdentifier(AccessibilityID.Overlay.settingsButton)
                 }
                 Button(action: onTogglePause) {
@@ -73,7 +75,9 @@ struct FloatingPanelView: View {
                         .glassEffect(.regular.interactive(), in: .circle)
                 }
                 .buttonStyle(.plain)
+                #if os(macOS)
                 .help(appState.isPaused ? "Resume" : "Pause")
+                #endif
                 .accessibilityIdentifier(AccessibilityID.Overlay.pauseButton)
             }
             .padding(.trailing, 12)

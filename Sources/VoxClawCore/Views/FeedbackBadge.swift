@@ -1,9 +1,13 @@
 import SwiftUI
 
-struct FeedbackBadge: View {
-    let text: String?
+public struct FeedbackBadge: View {
+    public let text: String?
 
-    var body: some View {
+    public init(text: String?) {
+        self.text = text
+    }
+
+    public var body: some View {
         if let text {
             Text(text)
                 .font(.callout.weight(.semibold))

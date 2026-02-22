@@ -1,10 +1,14 @@
 import Foundation
 import os
+#if os(macOS)
 import Security
+#endif
 
-enum KeychainHelper {
+public enum KeychainHelper {
     /// Override for testing — set to a temp directory to isolate from real storage.
     nonisolated(unsafe) static var storageDirectoryOverride: URL?
+
+    private static let kvsKey = "openai-api-key"
 
     private static var storageDirectory: URL {
         if let override = storageDirectoryOverride { return override }
@@ -34,7 +38,7 @@ enum KeychainHelper {
     }
 
     /// Reads API key, checking the `OPENAI_API_KEY` env var first, then file storage.
-    static func readAPIKey() throws -> String {
+    public static func readAPIKey() throws -> String {
         if let envKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
             .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }),
            !envKey.isEmpty {
@@ -45,21 +49,48 @@ enum KeychainHelper {
     }
 
     /// Reads API key from file storage, migrating from Keychain on first access if needed.
-    static func readPersistedAPIKey() throws -> String {
+    /// Falls back to iCloud KVS if no local copy exists.
+    public static func readPersistedAPIKey() throws -> String {
         // 1. Try file storage first
         if let key = readFromFile() {
             return key
         }
 
         // 2. One-time migration from Keychain (skip when storageDirectoryOverride is set, i.e. tests)
+        #if os(macOS)
         if storageDirectoryOverride == nil, let key = migrateFromKeychain() {
+            return key
+        }
+        #endif
+
+        // 3. Try iCloud KVS as fallback (skip in test mode)
+        if storageDirectoryOverride == nil, let key = readFromKVS() {
+            // Save locally so we don't need KVS next time
+            try? saveToFile(key)
+            Log.keychain.info("API key restored from iCloud KVS")
             return key
         }
 
         throw KeychainError.notFound
     }
 
-    static func saveAPIKey(_ key: String) throws {
+    public static func saveAPIKey(_ key: String) throws {
+        try saveToFile(key)
+        saveToKVS(key)
+    }
+
+    public static func deleteAPIKey() throws {
+        let fileURL = apiKeyFileURL
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+            Log.keychain.info("API key deleted from file storage")
+        }
+        removeFromKVS()
+    }
+
+    // MARK: - File Storage
+
+    private static func saveToFile(_ key: String) throws {
         let dir = storageDirectory
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileURL = apiKeyFileURL
@@ -70,16 +101,6 @@ enum KeychainHelper {
         )
         Log.keychain.info("API key saved to file storage")
     }
-
-    static func deleteAPIKey() throws {
-        let fileURL = apiKeyFileURL
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            try FileManager.default.removeItem(at: fileURL)
-            Log.keychain.info("API key deleted from file storage")
-        }
-    }
-
-    // MARK: - File Storage
 
     private static func readFromFile() -> String? {
         let fileURL = apiKeyFileURL
@@ -93,6 +114,42 @@ enum KeychainHelper {
         return key
     }
 
+    /// Push a local key to KVS if KVS is currently empty (first launch after upgrade).
+    public static func seedKVSIfNeeded(_ key: String) {
+        guard storageDirectoryOverride == nil else { return }
+        if readFromKVS() == nil {
+            saveToKVS(key)
+            Log.keychain.info("Seeded iCloud KVS with existing local API key")
+        }
+    }
+
+    // MARK: - iCloud KVS
+
+    private static func saveToKVS(_ key: String) {
+        guard storageDirectoryOverride == nil else { return }
+        NSUbiquitousKeyValueStore.default.set(key, forKey: kvsKey)
+        NSUbiquitousKeyValueStore.default.synchronize()
+        Log.keychain.info("API key synced to iCloud KVS")
+    }
+
+    private static func readFromKVS() -> String? {
+        NSUbiquitousKeyValueStore.default.synchronize()
+        guard let raw = NSUbiquitousKeyValueStore.default.string(forKey: kvsKey) else {
+            return nil
+        }
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return nil }
+        return key
+    }
+
+    private static func removeFromKVS() {
+        guard storageDirectoryOverride == nil else { return }
+        NSUbiquitousKeyValueStore.default.removeObject(forKey: kvsKey)
+        NSUbiquitousKeyValueStore.default.synchronize()
+        Log.keychain.info("API key removed from iCloud KVS")
+    }
+
+    #if os(macOS)
     // MARK: - One-Time Keychain Migration
 
     private static let defaultService = "openai-voice-api-key"
@@ -200,6 +257,7 @@ enum KeychainHelper {
             return []
         }
     }
+    #endif
 
     // MARK: - Helpers
 

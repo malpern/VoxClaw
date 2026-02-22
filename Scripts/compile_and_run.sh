@@ -31,7 +31,7 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
 fi
 
 log "==> Packaging app"
-SIGNING_MODE=adhoc "${ROOT_DIR}/Scripts/package_app.sh" release
+SIGNING_MODE="${SIGNING_MODE:-adhoc}" "${ROOT_DIR}/Scripts/package_app.sh" release
 
 log "==> Launching app"
 if ! open "${APP_BUNDLE}"; then

@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 struct SplashView: View {
@@ -22,3 +23,4 @@ struct SplashView: View {
         .frame(width: 280, height: 260)
     }
 }
+#endif

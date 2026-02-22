@@ -3,22 +3,22 @@ import Network
 import os
 
 @MainActor
-final class NetworkListener {
+public final class NetworkListener {
     private var listener: NWListener?
     private let port: UInt16
     private let serviceName: String?
     private let appState: AppState
     private var onReadRequest: (@Sendable (ReadRequest) async -> Void)?
 
-    var isListening: Bool { listener != nil }
+    public var isListening: Bool { listener != nil }
 
-    init(port: UInt16 = 4140, serviceName: String? = "VoxClaw", appState: AppState) {
+    public init(port: UInt16 = 4140, serviceName: String? = "VoxClaw", appState: AppState) {
         self.port = port
         self.serviceName = serviceName
         self.appState = appState
     }
 
-    func start(onReadRequest: @escaping @Sendable (ReadRequest) async -> Void) throws {
+    public func start(onReadRequest: @escaping @Sendable (ReadRequest) async -> Void) throws {
         guard listener == nil else { return }
         self.onReadRequest = onReadRequest
 
@@ -51,7 +51,7 @@ final class NetworkListener {
         printListeningInfo()
     }
 
-    func stop() {
+    public func stop() {
         listener?.cancel()
         listener = nil
         appState.isListening = false
@@ -128,7 +128,7 @@ final class NetworkListener {
         print("")
     }
 
-    static func localIPAddress() -> String? {
+    public static func localIPAddress() -> String? {
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else { return nil }
         defer { freeifaddrs(ifaddr) }

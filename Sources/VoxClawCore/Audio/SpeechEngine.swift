@@ -1,7 +1,7 @@
 import Foundation
 
 /// The state a speech engine can be in.
-enum SpeechEngineState: Sendable {
+public enum SpeechEngineState: Sendable {
     case idle
     case loading
     case playing
@@ -12,7 +12,7 @@ enum SpeechEngineState: Sendable {
 
 /// Callbacks from the engine to the session layer.
 @MainActor
-protocol SpeechEngineDelegate: AnyObject {
+public protocol SpeechEngineDelegate: AnyObject {
     func speechEngine(_ engine: any SpeechEngine, didUpdateWordIndex index: Int)
     func speechEngineDidFinish(_ engine: any SpeechEngine)
     func speechEngine(_ engine: any SpeechEngine, didChangeState state: SpeechEngineState)
@@ -21,7 +21,7 @@ protocol SpeechEngineDelegate: AnyObject {
 
 /// Abstraction over any TTS backend (Apple Speech or OpenAI).
 @MainActor
-protocol SpeechEngine: AnyObject {
+public protocol SpeechEngine: AnyObject {
     var delegate: SpeechEngineDelegate? { get set }
     var state: SpeechEngineState { get }
 

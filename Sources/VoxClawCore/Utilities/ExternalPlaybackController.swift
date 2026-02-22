@@ -1,17 +1,20 @@
-import AppKit
 import Foundation
 
 @MainActor
-protocol ExternalPlaybackControlling {
+public protocol ExternalPlaybackControlling {
     func pauseIfPlaying() -> Bool
     func resumePaused()
 }
 
-@MainActor
-final class ExternalPlaybackController: ExternalPlaybackControlling {
-    private var pausedApps: Set<String> = []
+#if os(macOS)
+import AppKit
 
-    func pauseIfPlaying() -> Bool {
+@MainActor
+public final class ExternalPlaybackController: ExternalPlaybackControlling {
+    private var pausedApps: Set<String> = []
+    public init() {}
+
+    public func pauseIfPlaying() -> Bool {
         pausedApps.removeAll()
 
         if isMusicPlaying() {
@@ -35,7 +38,7 @@ final class ExternalPlaybackController: ExternalPlaybackControlling {
         return !pausedApps.isEmpty
     }
 
-    func resumePaused() {
+    public func resumePaused() {
         defer { pausedApps.removeAll() }
 
         if pausedApps.contains("Music") {
@@ -99,3 +102,13 @@ final class ExternalPlaybackController: ExternalPlaybackControlling {
         return output?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+#endif
+
+#if os(iOS)
+@MainActor
+public final class ExternalPlaybackController: ExternalPlaybackControlling {
+    public init() {}
+    public func pauseIfPlaying() -> Bool { false }
+    public func resumePaused() {}
+}
+#endif

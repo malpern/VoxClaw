@@ -2,9 +2,9 @@ import AVFoundation
 import os
 
 @MainActor
-final class AppleSpeechEngine: NSObject, SpeechEngine {
-    weak var delegate: SpeechEngineDelegate?
-    private(set) var state: SpeechEngineState = .idle
+public final class AppleSpeechEngine: NSObject, SpeechEngine {
+    public weak var delegate: SpeechEngineDelegate?
+    public private(set) var state: SpeechEngineState = .idle
 
     private let synthesizer = AVSpeechSynthesizer()
     private var words: [String] = []
@@ -14,14 +14,14 @@ final class AppleSpeechEngine: NSObject, SpeechEngine {
     /// Maps character offset ranges in the original text to word indices.
     private var charOffsetToWordIndex: [(range: Range<Int>, wordIndex: Int)] = []
 
-    init(voiceIdentifier: String? = nil, rate: Float = 1.0) {
+    public init(voiceIdentifier: String? = nil, rate: Float = 1.0) {
         self.voiceIdentifier = voiceIdentifier
         self.rate = rate
         super.init()
         synthesizer.delegate = self
     }
 
-    func start(text: String, words: [String]) async {
+    public func start(text: String, words: [String]) async {
         self.words = words
         state = .loading
         delegate?.speechEngine(self, didChangeState: .loading)
@@ -45,19 +45,19 @@ final class AppleSpeechEngine: NSObject, SpeechEngine {
         delegate?.speechEngine(self, didChangeState: .playing)
     }
 
-    func pause() {
+    public func pause() {
         synthesizer.pauseSpeaking(at: .word)
         state = .paused
         delegate?.speechEngine(self, didChangeState: .paused)
     }
 
-    func resume() {
+    public func resume() {
         synthesizer.continueSpeaking()
         state = .playing
         delegate?.speechEngine(self, didChangeState: .playing)
     }
 
-    func stop() {
+    public func stop() {
         synthesizer.stopSpeaking(at: .immediate)
         state = .idle
         delegate?.speechEngine(self, didChangeState: .idle)
@@ -96,7 +96,7 @@ final class AppleSpeechEngine: NSObject, SpeechEngine {
 // MARK: - AVSpeechSynthesizerDelegate
 
 extension AppleSpeechEngine: AVSpeechSynthesizerDelegate {
-    nonisolated func speechSynthesizer(
+    nonisolated public func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         willSpeakRangeOfSpeechString characterRange: NSRange,
         utterance: AVSpeechUtterance
@@ -109,7 +109,7 @@ extension AppleSpeechEngine: AVSpeechSynthesizerDelegate {
         }
     }
 
-    nonisolated func speechSynthesizer(
+    nonisolated public func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didFinish utterance: AVSpeechUtterance
     ) {
@@ -119,7 +119,7 @@ extension AppleSpeechEngine: AVSpeechSynthesizerDelegate {
         }
     }
 
-    nonisolated func speechSynthesizer(
+    nonisolated public func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didPause utterance: AVSpeechUtterance
     ) {
@@ -129,7 +129,7 @@ extension AppleSpeechEngine: AVSpeechSynthesizerDelegate {
         }
     }
 
-    nonisolated func speechSynthesizer(
+    nonisolated public func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didContinue utterance: AVSpeechUtterance
     ) {

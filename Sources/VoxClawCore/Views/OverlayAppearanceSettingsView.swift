@@ -1,7 +1,13 @@
 import SwiftUI
 
-struct OverlayAppearanceSettingsView: View {
+public struct OverlayAppearanceSettingsView: View {
     @Bindable var settings: SettingsManager
+    @State private var showCustomOptions = false
+    @State private var showAdvanced = false
+
+    public init(settings: SettingsManager) {
+        self.settings = settings
+    }
 
     private let fontFamilies = [
         "Helvetica Neue", "SF Pro", "SF Mono", "Menlo",
@@ -16,26 +22,35 @@ struct OverlayAppearanceSettingsView: View {
         ("Bold", "bold"),
     ]
 
-    var body: some View {
+    public var body: some View {
         Group {
             Section("Style Presets") {
                 OverlayPresetGallery(settings: settings)
             }
-            textSection
-            colorsSection
-            layoutSection
 
-            Button("Reset to Defaults") {
-                settings.overlayAppearance = .resetToDefaults()
-            }
-            .accessibilityIdentifier(AccessibilityID.Appearance.resetButton)
+            DisclosureGroup(isExpanded: $showCustomOptions, content: {
+                essentialsSection
+                advancedSection
+
+                Button("Reset to Defaults") {
+                    settings.overlayAppearance = .resetToDefaults()
+                }
+                .accessibilityIdentifier(AccessibilityID.Appearance.resetButton)
+            }, label: {
+                Button {
+                    withAnimation { showCustomOptions.toggle() }
+                } label: {
+                    Text("Customize")
+                }
+                .buttonStyle(.plain)
+            })
         }
     }
 
-    // MARK: - Text Section
+    // MARK: - Essentials
 
-    private var textSection: some View {
-        Section("Text") {
+    private var essentialsSection: some View {
+        Section {
             Picker("Font", selection: fontFamilyBinding) {
                 ForEach(fontFamilies, id: \.self) { family in
                     Text(family).tag(family)
@@ -49,6 +64,27 @@ struct OverlayAppearanceSettingsView: View {
                     .accessibilityIdentifier(AccessibilityID.Appearance.fontSizeSlider)
             }
 
+            ColorPicker("Text Color", selection: textColorBinding)
+                .accessibilityIdentifier(AccessibilityID.Appearance.textColorPicker)
+
+            ColorPicker("Highlight Color", selection: highlightColorBinding)
+                .accessibilityIdentifier(AccessibilityID.Appearance.highlightColorPicker)
+
+            ColorPicker("Background", selection: bgColorBinding)
+                .accessibilityIdentifier(AccessibilityID.Appearance.bgColorPicker)
+
+            HStack {
+                Text("Background Opacity: \(Int(settings.overlayAppearance.backgroundColor.opacity * 100))%")
+                Slider(value: bgOpacityBinding, in: 0.1...1.0, step: 0.05)
+                    .accessibilityIdentifier(AccessibilityID.Appearance.bgOpacitySlider)
+            }
+        }
+    }
+
+    // MARK: - Advanced
+
+    private var advancedSection: some View {
+        DisclosureGroup(isExpanded: $showAdvanced, content: {
             Picker("Weight", selection: fontWeightBinding) {
                 ForEach(fontWeights, id: \.value) { weight in
                     Text(weight.label).tag(weight.value)
@@ -67,18 +103,6 @@ struct OverlayAppearanceSettingsView: View {
                 Slider(value: wordSpacingBinding, in: 0...20, step: 1)
                     .accessibilityIdentifier(AccessibilityID.Appearance.wordSpacingSlider)
             }
-        }
-    }
-
-    // MARK: - Colors Section
-
-    private var colorsSection: some View {
-        Section("Colors") {
-            ColorPicker("Text Color", selection: textColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.textColorPicker)
-
-            ColorPicker("Highlight Color", selection: highlightColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.highlightColorPicker)
 
             HStack {
                 Text("Past Word Opacity: \(Int(settings.overlayAppearance.pastWordOpacity * 100))%")
@@ -92,21 +116,6 @@ struct OverlayAppearanceSettingsView: View {
                     .accessibilityIdentifier(AccessibilityID.Appearance.futureOpacitySlider)
             }
 
-            ColorPicker("Background Color", selection: bgColorBinding)
-                .accessibilityIdentifier(AccessibilityID.Appearance.bgColorPicker)
-
-            HStack {
-                Text("Background Opacity: \(Int(settings.overlayAppearance.backgroundColor.opacity * 100))%")
-                Slider(value: bgOpacityBinding, in: 0.1...1.0, step: 0.05)
-                    .accessibilityIdentifier(AccessibilityID.Appearance.bgOpacitySlider)
-            }
-        }
-    }
-
-    // MARK: - Layout Section
-
-    private var layoutSection: some View {
-        Section("Layout") {
             HStack {
                 Text("Panel Width: \(Int(settings.overlayAppearance.panelWidthFraction * 100))%")
                 Slider(value: panelWidthBinding, in: 0.2...0.8, step: 0.05)
@@ -136,7 +145,14 @@ struct OverlayAppearanceSettingsView: View {
                 Slider(value: cornerRadiusBinding, in: 0...40, step: 2)
                     .accessibilityIdentifier(AccessibilityID.Appearance.cornerRadiusSlider)
             }
-        }
+        }, label: {
+            Button {
+                withAnimation { showAdvanced.toggle() }
+            } label: {
+                Text("Advanced")
+            }
+            .buttonStyle(.plain)
+        })
     }
 
     // MARK: - Bindings
@@ -182,11 +198,11 @@ struct OverlayAppearanceSettingsView: View {
                          green: settings.overlayAppearance.textColor.green,
                          blue: settings.overlayAppearance.textColor.blue) },
             set: { newColor in
-                let nsColor = NSColor(newColor).usingColorSpace(.sRGB) ?? NSColor(newColor)
+                let resolved = CodableColor(newColor)
                 settings.overlayAppearance.textColor = CodableColor(
-                    red: Double(nsColor.redComponent),
-                    green: Double(nsColor.greenComponent),
-                    blue: Double(nsColor.blueComponent),
+                    red: resolved.red,
+                    green: resolved.green,
+                    blue: resolved.blue,
                     opacity: settings.overlayAppearance.textColor.opacity
                 )
             }
@@ -199,11 +215,11 @@ struct OverlayAppearanceSettingsView: View {
                          green: settings.overlayAppearance.highlightColor.green,
                          blue: settings.overlayAppearance.highlightColor.blue) },
             set: { newColor in
-                let nsColor = NSColor(newColor).usingColorSpace(.sRGB) ?? NSColor(newColor)
+                let resolved = CodableColor(newColor)
                 settings.overlayAppearance.highlightColor = CodableColor(
-                    red: Double(nsColor.redComponent),
-                    green: Double(nsColor.greenComponent),
-                    blue: Double(nsColor.blueComponent),
+                    red: resolved.red,
+                    green: resolved.green,
+                    blue: resolved.blue,
                     opacity: settings.overlayAppearance.highlightColor.opacity
                 )
             }
@@ -230,11 +246,11 @@ struct OverlayAppearanceSettingsView: View {
                          green: settings.overlayAppearance.backgroundColor.green,
                          blue: settings.overlayAppearance.backgroundColor.blue) },
             set: { newColor in
-                let nsColor = NSColor(newColor).usingColorSpace(.sRGB) ?? NSColor(newColor)
+                let resolved = CodableColor(newColor)
                 settings.overlayAppearance.backgroundColor = CodableColor(
-                    red: Double(nsColor.redComponent),
-                    green: Double(nsColor.greenComponent),
-                    blue: Double(nsColor.blueComponent),
+                    red: resolved.red,
+                    green: resolved.green,
+                    blue: resolved.blue,
                     opacity: settings.overlayAppearance.backgroundColor.opacity
                 )
             }
