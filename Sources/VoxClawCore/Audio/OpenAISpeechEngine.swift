@@ -33,10 +33,6 @@ public final class OpenAISpeechEngine: SpeechEngine {
             let ttsService = TTSService(apiKey: apiKey, voice: voice, speed: speed, instructions: instructions)
             try player.prepare()
 
-            // Heuristic timing until real duration known
-            let heuristicDuration = WordTimingEstimator.heuristicDuration(for: text)
-            timings = WordTimingEstimator.estimate(words: words, totalDuration: heuristicDuration)
-
             // Buffer initial chunks before starting playback to prevent stutter.
             // Each chunk is ~100ms (4800 bytes), so 5 chunks ≈ 500ms of lead-in.
             let prebufferCount = 5
@@ -53,7 +49,6 @@ public final class OpenAISpeechEngine: SpeechEngine {
                     player.play()
                     state = .playing
                     delegate?.speechEngine(self, didChangeState: .playing)
-                    startDisplayLink()
                 }
             }
 
@@ -62,11 +57,12 @@ public final class OpenAISpeechEngine: SpeechEngine {
                 player.play()
                 state = .playing
                 delegate?.speechEngine(self, didChangeState: .playing)
-                startDisplayLink()
             }
             aligner?.finishAudio()
 
-            // Use recognizer timings if available, otherwise fall back to heuristic
+            // Compute accurate timings now that the full duration is known,
+            // then start the display link. This avoids the highlight racing
+            // ahead when heuristic timings underestimate the real duration.
             let realDuration = player.totalDuration
             if let aligner, aligner.isAvailable {
                 await aligner.awaitCompletion(timeout: 3.0)
@@ -82,6 +78,7 @@ public final class OpenAISpeechEngine: SpeechEngine {
                 Log.tts.info("Speech aligner unavailable, using heuristic (duration: \(realDuration, privacy: .public)s)")
                 timings = WordTimingEstimator.estimate(words: words, totalDuration: realDuration)
             }
+            startDisplayLink()
 
             // Detect completion
             player.scheduleEnd { [weak self] in

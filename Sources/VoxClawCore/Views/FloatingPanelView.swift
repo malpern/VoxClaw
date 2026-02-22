@@ -6,6 +6,8 @@ struct FloatingPanelView: View {
     var onTogglePause: () -> Void = {}
     var onOpenSettings: (() -> Void)?
 
+    @State private var isHovering = false
+
     private var appearance: OverlayAppearance { settings.overlayAppearance }
 
     var body: some View {
@@ -44,7 +46,15 @@ struct FloatingPanelView: View {
                     .padding(.bottom, 12)
             }
 
-            overlayControls
+            if isHovering {
+                overlayControls
+                    .transition(.opacity)
+            }
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovering = hovering
+            }
         }
         .accessibilityIdentifier(AccessibilityID.Overlay.panel)
     }
@@ -56,9 +66,9 @@ struct FloatingPanelView: View {
                 if let onOpenSettings {
                     Button(action: onOpenSettings) {
                         Image(systemName: "gearshape.fill")
-                            .font(.system(.caption, weight: .bold))
+                            .font(.system(.callout, weight: .bold))
                             .foregroundStyle(.white)
-                            .frame(width: 30, height: 30)
+                            .frame(width: 36, height: 36)
                             .glassEffect(.regular.interactive(), in: .circle)
                     }
                     .buttonStyle(.plain)
@@ -69,9 +79,9 @@ struct FloatingPanelView: View {
                 }
                 Button(action: onTogglePause) {
                     Image(systemName: appState.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(.caption, weight: .bold))
+                        .font(.system(.callout, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 36, height: 36)
                         .glassEffect(.regular.interactive(), in: .circle)
                 }
                 .buttonStyle(.plain)
