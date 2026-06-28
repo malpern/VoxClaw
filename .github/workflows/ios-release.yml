@@ -149,6 +149,26 @@ jobs:
             -f "$RUNNER_TEMP/export/VoxClawIOS.ipa" \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 
+      # altool uploads but does NOT distribute. Internal testers only see builds
+      # linked to their group, so wait for processing and add the build to the
+      # Internal Testers group. Best-effort: a failure here doesn't fail the run.
+      - name: Distribute to internal testers
+        continue-on-error: true
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc_key.p8
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          APP_ID: "6759539001"
+          INTERNAL_GROUP_ID: "356ad380-9fca-4e1a-9abd-0fa18a8bed9b"
+        run: |
+          brew install asc
+          echo "$ASC_API_KEY_P8_BASE64" | base64 --decode > "$ASC_PRIVATE_KEY_PATH"
+          # Wait for the just-uploaded build to finish processing, then link it.
+          asc builds wait --app "$APP_ID" --build-number "$BUILD_NUMBER" --platform IOS || true
+          asc builds add-groups --app "$APP_ID" --build-number "$BUILD_NUMBER" \
+            --platform IOS --group "$INTERNAL_GROUP_ID"
+
       - name: Cleanup
         if: always()
         run: |
