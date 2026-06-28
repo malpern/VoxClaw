@@ -26,6 +26,7 @@ public final class SettingsManager {
         static let networkListenerEnabled = "networkListenerEnabled"
         static let networkListenerPort = "networkListenerPort"
         static let backgroundKeepAlive = "backgroundKeepAlive"
+        static let cloudRelayEnabled = "cloudRelayEnabled"
         static let rememberOverlayPosition = "rememberOverlayPosition"
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
         static let overlayAppearance = "overlayAppearance"
@@ -152,6 +153,17 @@ public final class SettingsManager {
         didSet {
             UserDefaults.standard.set(backgroundKeepAlive, forKey: "backgroundKeepAlive")
             NSUbiquitousKeyValueStore.default.set(backgroundKeepAlive, forKey: KVSKey.backgroundKeepAlive)
+        }
+    }
+
+    /// Relay agent speech between the user's devices via CloudKit. On the Mac
+    /// this gates *sending* a speech request; on iOS it gates *subscribing* and
+    /// speaking incoming requests (waking the app via silent push). Synced via
+    /// iCloud KVS so one toggle enables the whole relay across devices.
+    public var cloudRelayEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(cloudRelayEnabled, forKey: "cloudRelayEnabled")
+            NSUbiquitousKeyValueStore.default.set(cloudRelayEnabled, forKey: KVSKey.cloudRelayEnabled)
         }
     }
 
@@ -322,6 +334,12 @@ public final class SettingsManager {
             self.backgroundKeepAlive = UserDefaults.standard.bool(forKey: "backgroundKeepAlive")
         }
 
+        if kvs.object(forKey: KVSKey.cloudRelayEnabled) != nil {
+            self.cloudRelayEnabled = kvs.bool(forKey: KVSKey.cloudRelayEnabled)
+        } else {
+            self.cloudRelayEnabled = UserDefaults.standard.bool(forKey: "cloudRelayEnabled")
+        }
+
         if kvs.object(forKey: KVSKey.rememberOverlayPosition) != nil {
             self.rememberOverlayPosition = kvs.bool(forKey: KVSKey.rememberOverlayPosition)
         } else {
@@ -404,6 +422,7 @@ public final class SettingsManager {
         kvs.set(networkListenerEnabled, forKey: KVSKey.networkListenerEnabled)
         kvs.set(Int(networkListenerPort), forKey: KVSKey.networkListenerPort)
         kvs.set(backgroundKeepAlive, forKey: KVSKey.backgroundKeepAlive)
+        kvs.set(cloudRelayEnabled, forKey: KVSKey.cloudRelayEnabled)
         kvs.set(rememberOverlayPosition, forKey: KVSKey.rememberOverlayPosition)
         kvs.set(hasCompletedOnboarding, forKey: KVSKey.hasCompletedOnboarding)
         if let data = try? JSONEncoder().encode(overlayAppearance) {
@@ -562,6 +581,14 @@ public final class SettingsManager {
                     if value != self.backgroundKeepAlive {
                         self.backgroundKeepAlive = value
                         Log.settings.info("Background keep-alive updated from iCloud KVS")
+                    }
+                }
+
+                if changedKeys.contains(KVSKey.cloudRelayEnabled) {
+                    let value = kvs.bool(forKey: KVSKey.cloudRelayEnabled)
+                    if value != self.cloudRelayEnabled {
+                        self.cloudRelayEnabled = value
+                        Log.settings.info("Cloud relay toggle updated from iCloud KVS")
                     }
                 }
 

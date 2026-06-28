@@ -11,6 +11,9 @@ struct VoxClawIOSApp: App {
     @State private var settings = SharedIOSApp.settings
     @State private var coordinator = SharedIOSApp.coordinator
 
+    // Bridges remote-notification callbacks (CloudKit relay wake) into the app.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup {
             ContentView(appState: appState, settings: settings, coordinator: coordinator)
@@ -23,6 +26,15 @@ struct VoxClawIOSApp: App {
                     #endif
                     coordinator.startListening(appState: appState, settings: settings)
                     coordinator.observeAudioInterruptions(appState: appState)
+                    if settings.cloudRelayEnabled {
+                        UIApplication.shared.registerForRemoteNotifications()
+                        await coordinator.ensureCloudRelay(settings: settings)
+                    }
+                }
+                .onChange(of: settings.cloudRelayEnabled) { _, enabled in
+                    guard enabled else { return }
+                    UIApplication.shared.registerForRemoteNotifications()
+                    Task { await coordinator.ensureCloudRelay(settings: settings) }
                 }
                 .onChange(of: appState.queueActive) { _, active in
                     if active {

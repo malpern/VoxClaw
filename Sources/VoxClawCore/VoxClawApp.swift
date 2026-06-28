@@ -382,6 +382,7 @@ final class AppCoordinator: SpeechQueueDelegate {
     let queue = SpeechQueueCoordinator()
     let voiceAssigner = VoiceAssigner(store: VoiceBindingStore(fileURL: VoiceBindingStore.defaultURL()))
     let peerBrowser = PeerBrowser()
+    let cloudRelay = CloudSpeechRelay()
     let deviceID = UUID().uuidString
     private var settingsRef: SettingsManager?
 
@@ -439,6 +440,32 @@ final class AppCoordinator: SpeechQueueDelegate {
 
         if !request.relayed {
             relayToPeers(request: resolvedRequest, settings: settings)
+            relayToCloud(request: resolvedRequest, settings: settings)
+        }
+    }
+
+    /// Relays a speech request to the user's other devices via CloudKit, which
+    /// silent-pushes (and wakes) a backgrounded/locked iPhone the LAN can't reach.
+    /// Opt-in via `cloudRelayEnabled`; never re-relays an already-relayed request.
+    private func relayToCloud(request: ReadRequest, settings: SettingsManager) {
+        guard settings.cloudRelayEnabled else { return }
+        let payload = CloudSpeechRelay.Payload(
+            text: request.text,
+            voice: request.voice,
+            rate: request.rate,
+            instructions: request.instructions,
+            projectId: request.projectId,
+            agentId: request.agentId,
+            engine: request.engine
+        )
+        let relay = cloudRelay
+        Task.detached {
+            do {
+                try await relay.send(payload)
+                Log.network.info("Relayed speech request via CloudKit")
+            } catch {
+                Log.network.error("CloudKit relay failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 

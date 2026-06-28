@@ -11,6 +11,11 @@ final class iOSCoordinator: SpeechQueueDelegate {
     let queue = SpeechQueueCoordinator()
     let keepAlive = BackgroundAudioKeepAlive()
     let peerBrowser = PeerBrowser()
+    let cloudRelay = CloudSpeechRelay()
+
+    /// Watermark for CloudKit relay dedup; persisted so a freshly-launched (push-
+    /// woken) process doesn't replay already-spoken requests.
+    private static let lastCloudFetchKey = "lastCloudSpeechFetch"
 
     func startListening(appState: AppState, settings: SettingsManager) {
         stopListening()
@@ -61,6 +66,50 @@ final class iOSCoordinator: SpeechQueueDelegate {
         configureAudioSession()
         UIApplication.shared.isIdleTimerDisabled = true
         queue.enqueue(text, appState: appState, settings: settings)
+    }
+
+    // MARK: - CloudKit relay (wake-and-speak)
+
+    /// Registers the CloudKit silent-push subscription so this device wakes when
+    /// the Mac relays speech. Seeds the dedup watermark to "now" on first enable
+    /// so historical requests aren't replayed. Safe to call repeatedly.
+    func ensureCloudRelay(settings: SettingsManager) async {
+        guard settings.cloudRelayEnabled else { return }
+        if UserDefaults.standard.object(forKey: Self.lastCloudFetchKey) == nil {
+            UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
+        }
+        do {
+            try await cloudRelay.ensureSubscription()
+        } catch {
+            print("CloudKit subscription failed: \(error)")
+        }
+    }
+
+    /// Called when a CloudKit silent push wakes the app: fetch any speech
+    /// requests newer than the watermark and speak them.
+    func handleCloudWake(appState: AppState, settings: SettingsManager) async {
+        guard settings.cloudRelayEnabled else { return }
+        let watermark = Date(timeIntervalSince1970: UserDefaults.standard.double(forKey: Self.lastCloudFetchKey))
+        do {
+            let pending = try await cloudRelay.fetchPending(since: watermark)
+            guard !pending.isEmpty else { return }
+            keepAlive.resetTimeout()
+            configureAudioSession()
+            UIApplication.shared.isIdleTimerDisabled = true
+            for payload in pending {
+                queue.enqueue(
+                    payload.text,
+                    appState: appState,
+                    settings: settings,
+                    projectId: payload.projectId,
+                    agentId: payload.agentId,
+                    requestedEngine: payload.engine
+                )
+            }
+            UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
+        } catch {
+            print("CloudKit fetch failed: \(error)")
+        }
     }
 
     func togglePause() {
