@@ -220,6 +220,9 @@ if [[ "$SIGNING_MODE" == "adhoc" || -z "$APP_IDENTITY" ]]; then
   cp "$APP_ENTITLEMENTS" "$ADHOC_ENTITLEMENTS"
   /usr/libexec/PlistBuddy -c "Delete :com.apple.application-identifier" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
   /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.ubiquity-kvstore-identifier" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
+  # CloudKit entitlements require Developer ID + provisioning profile; strip for ad-hoc.
+  /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.icloud-container-identifiers" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.icloud-services" "$ADHOC_ENTITLEMENTS" 2>/dev/null || true
   CODESIGN_ARGS=(--force --sign "-")
   sign_sparkle
   codesign "${CODESIGN_ARGS[@]}" \

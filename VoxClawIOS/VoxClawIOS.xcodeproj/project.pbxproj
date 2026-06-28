@@ -268,7 +268,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = X2RKZ5TG99;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VoxClawWidgets/Info.plist;
@@ -424,7 +424,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = X2RKZ5TG99;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VoxClawIOS/Info.plist;
@@ -457,7 +457,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = X2RKZ5TG99;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VoxClawIOS/Info.plist;
@@ -489,7 +489,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = X2RKZ5TG99;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VoxClawWidgets/Info.plist;
