@@ -31,6 +31,7 @@ struct iOSSettingsView: View {
             overlaySection
             voiceSection
             networkSection
+            cloudRelaySection
         }
         .onAppear {
             portText = String(settings.networkListenerPort)
@@ -252,6 +253,16 @@ struct iOSSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             #endif
+        }
+    }
+
+    private var cloudRelaySection: some View {
+        Section("Remote Relay") {
+            Toggle("Speak my Mac's agent here", isOn: $settings.cloudRelayEnabled)
+
+            Text("Lets your Mac speak through this device over iCloud — even when the app is closed or the phone is locked. Both devices must be signed into the same iCloud account with this turned on.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 }

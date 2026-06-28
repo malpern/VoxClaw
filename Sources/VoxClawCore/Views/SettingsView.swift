@@ -334,6 +334,13 @@ struct SettingsView: View {
         Group {
             PeerSpeakerList(settings: settings, peerBrowser: peerBrowser)
 
+            Toggle("Relay to my devices over iCloud", isOn: $settings.cloudRelayEnabled)
+            if settings.cloudRelayEnabled {
+                Text("Also speaks agent output on your iPhone/iPad via iCloud — even when VoxClaw is closed or the device is locked. Enable it on each device too.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let copiedName = copiedPeerSetup {
                 Label("Copied setup for \(copiedName). Paste into OpenClaw.", systemImage: "checkmark.circle.fill")
                     .font(.caption)
