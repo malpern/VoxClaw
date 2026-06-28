@@ -112,6 +112,15 @@ PLIST
 build_product_path() {
   local name="$1"
   local arch="$2"
+  # Ask SwiftPM for the real bin dir — its layout changed across toolchains
+  # (newer Swift uses .build/out/Products/<Config> instead of
+  # .build/<arch>-apple-macosx/<config>). Fall back to the historical path.
+  local bindir
+  bindir=$(swift build -c "$CONF" --arch "$arch" --show-bin-path 2>/dev/null)
+  if [[ -n "$bindir" && -f "$bindir/$name" ]]; then
+    echo "$bindir/$name"
+    return
+  fi
   case "$arch" in
     arm64|x86_64) echo ".build/${arch}-apple-macosx/$CONF/$name" ;;
     *) echo ".build/$CONF/$name" ;;
