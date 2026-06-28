@@ -1,0 +1,20 @@
+// CloudKit schema for the agent-speech relay (see CloudSpeechRelay.swift).
+// The Mac writes SpeechRequest records to the private database; the iPhone is
+// silent-pushed and queries new records by `sentAt`, so that field must be
+// QUERYABLE + SORTABLE. Deploy with Scripts/cloudkit/deploy-schema.sh.
+
+DEFINE SCHEMA
+
+RECORD TYPE SpeechRequest (
+    agentId      STRING,
+    engine       STRING,
+    instructions STRING,
+    projectId    STRING,
+    rate         DOUBLE,
+    sentAt       TIMESTAMP QUERYABLE SORTABLE,
+    text         STRING,
+    voice        STRING,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_creator",
+    GRANT READ TO "_creator"
+);
