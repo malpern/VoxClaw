@@ -24,6 +24,7 @@ final class iOSCoordinator: SpeechQueueDelegate {
     func startListening(appState: AppState, settings: SettingsManager) {
         stopListening()
         queue.delegate = self
+        startDrivingLiveActivity(appState: appState)
         peerBrowser.start()
         let port = settings.networkListenerPort
         let listener = VoxClawCore.NetworkListener(port: port, appState: appState, settings: settings)
@@ -105,6 +106,9 @@ final class iOSCoordinator: SpeechQueueDelegate {
     /// requests newer than the watermark and speak them.
     func handleCloudWake(appState: AppState, settings: SettingsManager) async {
         guard settings.cloudRelayEnabled else { return }
+        // Drive the Live Activity from here too: when the push wakes us in the
+        // background, the SwiftUI scene isn't active, so its observers never fire.
+        startDrivingLiveActivity(appState: appState)
         let watermark = Date(timeIntervalSince1970: UserDefaults.standard.double(forKey: Self.lastCloudFetchKey))
         do {
             let pending = try await cloudRelay.fetchPending(since: watermark)
@@ -135,6 +139,63 @@ final class iOSCoordinator: SpeechQueueDelegate {
         } catch {
             print("CloudKit fetch failed: \(error)")
         }
+    }
+
+    // MARK: - Live Activity
+
+    private var liveActivityObserving = false
+    private var liveActivityWasActive = false
+
+    /// Drives the "Now reading" Live Activity from non-UI code, so it appears even
+    /// when the app was woken in the background by a relay push (locked phone) —
+    /// the SwiftUI view's observers don't run in that case. Idempotent.
+    func startDrivingLiveActivity(appState: AppState) {
+        guard !liveActivityObserving else { return }
+        liveActivityObserving = true
+        tickLiveActivity(appState: appState)
+        observeLiveActivity(appState: appState)
+    }
+
+    private func observeLiveActivity(appState: AppState) {
+        withObservationTracking {
+            _ = appState.queueActive
+            _ = appState.currentWordIndex
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.tickLiveActivity(appState: appState)
+                self.observeLiveActivity(appState: appState)  // re-arm (one-shot API)
+            }
+        }
+    }
+
+    private func tickLiveActivity(appState: AppState) {
+        let active = appState.queueActive
+        if active && !liveActivityWasActive {
+            LiveActivityController.shared.start(
+                snippet: liveActivitySnippet(words: appState.words, index: appState.currentWordIndex),
+                title: appState.projectIndicators.first?.name ?? "VoxClaw"
+            )
+        } else if !active && liveActivityWasActive {
+            Task { await LiveActivityController.shared.end() }
+        } else if active, appState.words.count > 1 {
+            let idx = appState.currentWordIndex
+            let snippet = liveActivitySnippet(words: appState.words, index: idx)
+            let progress = Double(idx) / Double(appState.words.count - 1)
+            Task { await LiveActivityController.shared.update(snippet: snippet, progress: progress) }
+        }
+        liveActivityWasActive = active
+    }
+
+    /// A short window of words around the current position for the Live Activity.
+    private func liveActivitySnippet(words: [String], index: Int) -> String {
+        guard !words.isEmpty else { return "Reading…" }
+        let start = min(max(0, index), words.count - 1)
+        let end = min(words.count, start + 8)
+        let text = words[start..<end]
+            .filter { $0 != ReadingSession.paragraphSentinel }
+            .joined(separator: " ")
+        return text.isEmpty ? "Reading…" : text
     }
 
     func togglePause() {
