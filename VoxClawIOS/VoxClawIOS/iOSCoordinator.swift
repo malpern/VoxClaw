@@ -106,10 +106,17 @@ final class iOSCoordinator: SpeechQueueDelegate {
             configureAudioSession()
             UIApplication.shared.isIdleTimerDisabled = true
             for payload in pending {
+                // Speak with the engine + voice the sender resolved for this agent,
+                // so the agent sounds identical across devices.
+                let engine = settings.makeRelayEngine(
+                    engine: payload.engine ?? settings.voiceEngine,
+                    voice: payload.voice
+                )
                 queue.enqueue(
                     payload.text,
                     appState: appState,
                     settings: settings,
+                    engineOverride: engine,
                     projectId: payload.projectId,
                     agentId: payload.agentId,
                     requestedEngine: payload.engine

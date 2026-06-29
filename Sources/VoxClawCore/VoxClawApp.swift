@@ -439,8 +439,20 @@ final class AppCoordinator: SpeechQueueDelegate {
         }
 
         if !request.relayed {
-            relayToPeers(request: resolvedRequest, settings: settings)
-            relayToCloud(request: resolvedRequest, settings: settings)
+            // Stamp the effective engine + the voice resolved for it, so receivers
+            // (iOS, LAN peers) reproduce the same per-agent voice instead of
+            // re-deriving their own (which diverges across devices).
+            let effectiveEngine = request.engine ?? settings.voiceEngine
+            var relayVoice = request.voice
+            if relayVoice == nil {
+                relayVoice = await voiceAssigner.resolveVoice(projectId: request.projectId, agentId: request.agentId, engine: effectiveEngine)
+            }
+            let relayVoiceFinal = relayVoice ?? settings.defaultVoice(for: effectiveEngine)
+            var relayRequest = resolvedRequest
+            relayRequest.engine = effectiveEngine
+            relayRequest.voice = relayVoiceFinal
+            relayToPeers(request: relayRequest, settings: settings)
+            relayToCloud(request: relayRequest, settings: settings)
         }
     }
 

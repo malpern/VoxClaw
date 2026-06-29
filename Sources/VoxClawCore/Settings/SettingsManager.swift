@@ -653,4 +653,38 @@ public final class SettingsManager {
             return FallbackSpeechEngine(primary: primary, fallback: fallback)
         }
     }
+
+    /// Builds an engine for an explicit engine + voice. Used by the relay receiver
+    /// to reproduce the sender's per-agent voice verbatim (the sender owns the
+    /// agent→voice mapping; receivers must not re-derive it). Falls back to Apple
+    /// when the requested engine isn't configured on this device.
+    public func makeRelayEngine(engine: VoiceEngineType, voice: String?) -> any SpeechEngine {
+        let instructions = readingStyle.isEmpty ? nil : readingStyle
+        let apple = AppleSpeechEngine(
+            voiceIdentifier: (engine == .apple ? voice : nil) ?? appleVoiceIdentifier,
+            rate: voiceSpeed
+        )
+        switch engine {
+        case .apple:
+            return apple
+        case .openai where isOpenAIConfigured:
+            let primary = OpenAISpeechEngine(apiKey: openAIAPIKey, voice: voice ?? openAIVoice, speed: voiceSpeed, instructions: instructions)
+            return FallbackSpeechEngine(primary: primary, fallback: apple)
+        case .elevenlabs where isElevenLabsConfigured:
+            let primary = ElevenLabsSpeechEngine(apiKey: elevenLabsAPIKey, voiceID: voice ?? elevenLabsVoiceID, speed: voiceSpeed, turbo: elevenLabsTurbo)
+            return FallbackSpeechEngine(primary: primary, fallback: apple)
+        default:
+            return apple
+        }
+    }
+
+    /// The configured default voice id for an engine (used by the sender when an
+    /// agent has no assigned voice yet).
+    public func defaultVoice(for engine: VoiceEngineType) -> String? {
+        switch engine {
+        case .openai: return openAIVoice
+        case .apple: return appleVoiceIdentifier
+        case .elevenlabs: return elevenLabsVoiceID
+        }
+    }
 }
