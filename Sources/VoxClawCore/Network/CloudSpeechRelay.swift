@@ -8,11 +8,17 @@ import os
 /// database, so a Mac agent can speak on an iPhone that is locked, backgrounded,
 /// or on a different network — the cases the LAN `NetworkListener` can't reach.
 ///
-/// Flow: the Mac calls ``send(_:)`` to write a `SpeechRequest` record. CloudKit
-/// delivers a silent (content-available) push to the user's other devices via a
-/// `CKQuerySubscription`; on wake they call ``fetchPending(since:)`` to pull the
-/// text and speak it. The actual text travels in the record (chosen over a
-/// wake-only signal so it works off-LAN).
+/// Flow: the Mac calls ``send(_:)`` to write a `SpeechRequest` record into a
+/// custom zone. CloudKit delivers a silent (content-available) push to the
+/// user's other devices via a `CKDatabaseSubscription`; on wake they call
+/// ``fetchPending(since:)`` to pull the text and speak it.
+///
+/// We use a `CKDatabaseSubscription` on a **custom zone** rather than a
+/// `CKQuerySubscription`: query subscriptions are unreliable to create in
+/// production containers (a long-standing CloudKit issue — "attempting to create
+/// a subscription in a production container"), whereas database subscriptions
+/// have no predicate/index requirements and create cleanly in production. Database
+/// subscriptions only fire for custom zones, so the relay writes to one.
 ///
 /// This complements — does not replace — the LAN path: same-network/foreground
 /// delivery still goes through `NetworkListener` for low latency.
@@ -20,15 +26,25 @@ public actor CloudSpeechRelay {
     /// Default container; matches the app's `iCloud.<bundle-id>` convention.
     public static let defaultContainerID = "iCloud.com.malpern.voxclaw"
     static let recordType = "SpeechRequest"
-    static let subscriptionID = "voxclaw-speech-requests"
+    static let subscriptionID = "voxclaw-speech-db"
+    static let zoneName = "SpeechRelay"
 
     private let container: CKContainer
     private let database: CKDatabase
+    private let zoneID: CKRecordZone.ID
     private let log = Logger(subsystem: "com.malpern.voxclaw", category: "CloudSpeechRelay")
 
     public init(containerID: String = CloudSpeechRelay.defaultContainerID) {
         self.container = CKContainer(identifier: containerID)
         self.database = container.privateCloudDatabase
+        self.zoneID = CKRecordZone.ID(zoneName: Self.zoneName, ownerName: CKCurrentUserDefaultName)
+    }
+
+    /// Creates the custom zone the relay uses (idempotent — saving an existing
+    /// zone is a no-op). Database subscriptions only fire for custom zones, so
+    /// both the sender and the receiver must ensure it exists.
+    private func ensureZone() async throws {
+        _ = try await database.save(CKRecordZone(zoneID: zoneID))
     }
 
     /// Human-readable iCloud account status for diagnostics ("available",
@@ -84,10 +100,12 @@ public actor CloudSpeechRelay {
 
     // MARK: - Sending (Mac)
 
-    /// Writes a speech request to the private database. CloudKit pushes it to the
-    /// user's other devices subscribed via ``ensureSubscription()``.
+    /// Writes a speech request into the relay's custom zone. CloudKit pushes it to
+    /// the user's other devices subscribed via ``ensureSubscription()``.
     public func send(_ payload: Payload) async throws {
-        let record = CKRecord(recordType: Self.recordType)
+        try await ensureZone()
+        let recordID = CKRecord.ID(recordName: UUID().uuidString, zoneID: zoneID)
+        let record = CKRecord(recordType: Self.recordType, recordID: recordID)
         record["text"] = payload.text as CKRecordValue
         if let v = payload.voice { record["voice"] = v as CKRecordValue }
         if let r = payload.rate { record["rate"] = Double(r) as CKRecordValue }
@@ -102,24 +120,21 @@ public actor CloudSpeechRelay {
 
     // MARK: - Subscription (iOS receiver)
 
-    /// Registers the silent-push subscription that wakes this device when a new
-    /// `SpeechRequest` appears. Idempotent: an "already exists" error is ignored.
+    /// Registers the silent-push database subscription that wakes this device when
+    /// any record changes in a custom zone (the relay's `SpeechRelay` zone).
+    /// Idempotent: an "already exists" rejection is ignored.
     public func ensureSubscription() async throws {
-        let subscription = CKQuerySubscription(
-            recordType: Self.recordType,
-            predicate: NSPredicate(value: true),
-            subscriptionID: Self.subscriptionID,
-            options: [.firesOnRecordCreation]
-        )
+        try await ensureZone()
+        let subscription = CKDatabaseSubscription(subscriptionID: Self.subscriptionID)
         let info = CKSubscription.NotificationInfo()
         info.shouldSendContentAvailable = true   // silent push, no alert/badge/sound
         subscription.notificationInfo = info
         do {
             _ = try await database.save(subscription)
-            log.debug("CloudKit speech subscription registered")
+            log.debug("CloudKit database subscription registered")
         } catch let error as CKError where error.code == .serverRejectedRequest {
             // Subscription with this ID already exists — fine.
-            log.debug("CloudKit speech subscription already present")
+            log.debug("CloudKit database subscription already present")
         }
     }
 
@@ -132,7 +147,7 @@ public actor CloudSpeechRelay {
         let predicate = NSPredicate(format: "sentAt > %@", since as NSDate)
         let query = CKQuery(recordType: Self.recordType, predicate: predicate)
         query.sortDescriptors = [NSSortDescriptor(key: "sentAt", ascending: true)]
-        let (matches, _) = try await database.records(matching: query)
+        let (matches, _) = try await database.records(matching: query, inZoneWith: zoneID)
         var payloads: [Payload] = []
         for (_, result) in matches {
             guard case let .success(record) = result, let text = record["text"] as? String else { continue }
