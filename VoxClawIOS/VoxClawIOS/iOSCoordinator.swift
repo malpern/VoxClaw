@@ -35,11 +35,19 @@ final class iOSCoordinator: SpeechQueueDelegate {
                         self.keepAlive.resetTimeout()
                         self.configureAudioSession()
                         UIApplication.shared.isIdleTimerDisabled = true
+                        // A relayed request carries the sender's resolved voice/engine —
+                        // honor them so the agent sounds the same here as on the source.
+                        let engineOverride: (any SpeechEngine)? = request.relayed
+                            ? settings.makeRelayEngine(engine: request.engine ?? settings.voiceEngine, voice: request.voice)
+                            : nil
                         self.queue.enqueue(
                             request.text,
                             appState: appState,
                             settings: settings,
-                            projectId: request.projectId
+                            engineOverride: engineOverride,
+                            projectId: request.projectId,
+                            agentId: request.agentId,
+                            requestedEngine: request.engine
                         )
                     }
                 },
@@ -100,7 +108,8 @@ final class iOSCoordinator: SpeechQueueDelegate {
         let watermark = Date(timeIntervalSince1970: UserDefaults.standard.double(forKey: Self.lastCloudFetchKey))
         do {
             let pending = try await cloudRelay.fetchPending(since: watermark)
-            cloudRelayStatus = "woke \(Date.now.formatted(date: .omitted, time: .standard)) · \(pending.count) pending"
+            let received = pending.first.map { "\($0.engine?.rawValue ?? "?")/\($0.voice ?? "nil")" } ?? "—"
+            cloudRelayStatus = "woke \(Date.now.formatted(date: .omitted, time: .standard)) · \(pending.count) pending · rx \(received)"
             guard !pending.isEmpty else { return }
             keepAlive.resetTimeout()
             configureAudioSession()

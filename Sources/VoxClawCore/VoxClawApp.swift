@@ -496,6 +496,7 @@ final class AppCoordinator: SpeechQueueDelegate {
             if let i = request.instructions { payload["instructions"] = i }
             if let p = request.projectId { payload["project_id"] = p }
             if let a = request.agentId { payload["agent_id"] = a }
+            if let e = request.engine { payload["engine"] = e.rawValue }
 
             guard let body = try? JSONSerialization.data(withJSONObject: payload) else { continue }
             var urlRequest = URLRequest(url: url)
