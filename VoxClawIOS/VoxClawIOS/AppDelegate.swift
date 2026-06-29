@@ -21,13 +21,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        // CloudKit routes its own pushes; we don't run a server, so nothing to do.
+        // CloudKit routes its own pushes; we don't run a server, so nothing to send.
+        SharedIOSApp.coordinator.cloudRelayStatus += " · APNs ✓"
     }
 
     func application(
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
+        SharedIOSApp.coordinator.cloudRelayStatus += " · APNs failed: \(error.localizedDescription)"
         print("Remote notification registration failed: \(error)")
     }
 }

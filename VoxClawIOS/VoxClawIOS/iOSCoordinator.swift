@@ -13,6 +13,10 @@ final class iOSCoordinator: SpeechQueueDelegate {
     let peerBrowser = PeerBrowser()
     let cloudRelay = CloudSpeechRelay()
 
+    /// Human-readable CloudKit relay diagnostics, surfaced in Settings so the
+    /// state is visible on-device (the unified log isn't always reachable).
+    var cloudRelayStatus = "not started"
+
     /// Watermark for CloudKit relay dedup; persisted so a freshly-launched (push-
     /// woken) process doesn't replay already-spoken requests.
     private static let lastCloudFetchKey = "lastCloudSpeechFetch"
@@ -74,13 +78,17 @@ final class iOSCoordinator: SpeechQueueDelegate {
     /// the Mac relays speech. Seeds the dedup watermark to "now" on first enable
     /// so historical requests aren't replayed. Safe to call repeatedly.
     func ensureCloudRelay(settings: SettingsManager) async {
-        guard settings.cloudRelayEnabled else { return }
+        guard settings.cloudRelayEnabled else { cloudRelayStatus = "relay off"; return }
         if UserDefaults.standard.object(forKey: Self.lastCloudFetchKey) == nil {
             UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
         }
+        let account = await cloudRelay.accountStatusDescription()
+        cloudRelayStatus = "iCloud: \(account) · subscribing…"
         do {
             try await cloudRelay.ensureSubscription()
+            cloudRelayStatus = "iCloud: \(account) · subscribed ✓"
         } catch {
+            cloudRelayStatus = "iCloud: \(account) · subscribe failed: \(error.localizedDescription)"
             print("CloudKit subscription failed: \(error)")
         }
     }
@@ -92,6 +100,7 @@ final class iOSCoordinator: SpeechQueueDelegate {
         let watermark = Date(timeIntervalSince1970: UserDefaults.standard.double(forKey: Self.lastCloudFetchKey))
         do {
             let pending = try await cloudRelay.fetchPending(since: watermark)
+            cloudRelayStatus = "woke \(Date.now.formatted(date: .omitted, time: .standard)) · \(pending.count) pending"
             guard !pending.isEmpty else { return }
             keepAlive.resetTimeout()
             configureAudioSession()

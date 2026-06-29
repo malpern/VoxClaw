@@ -22,11 +22,31 @@ public actor CloudSpeechRelay {
     static let recordType = "SpeechRequest"
     static let subscriptionID = "voxclaw-speech-requests"
 
+    private let container: CKContainer
     private let database: CKDatabase
     private let log = Logger(subsystem: "com.malpern.voxclaw", category: "CloudSpeechRelay")
 
     public init(containerID: String = CloudSpeechRelay.defaultContainerID) {
-        self.database = CKContainer(identifier: containerID).privateCloudDatabase
+        self.container = CKContainer(identifier: containerID)
+        self.database = container.privateCloudDatabase
+    }
+
+    /// Human-readable iCloud account status for diagnostics ("available",
+    /// "noAccount", "restricted", …). The relay can't work unless this is
+    /// "available".
+    public func accountStatusDescription() async -> String {
+        do {
+            switch try await container.accountStatus() {
+            case .available: return "available"
+            case .noAccount: return "noAccount (sign into iCloud)"
+            case .restricted: return "restricted"
+            case .couldNotDetermine: return "couldNotDetermine"
+            case .temporarilyUnavailable: return "temporarilyUnavailable"
+            @unknown default: return "unknown"
+            }
+        } catch {
+            return "error: \(error.localizedDescription)"
+        }
     }
 
     // MARK: - Payload

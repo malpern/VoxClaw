@@ -263,6 +263,15 @@ struct iOSSettingsView: View {
             Text("Lets your Mac speak through this device over iCloud — even when the app is closed or the phone is locked. Both devices must be signed into the same iCloud account with this turned on.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+
+            if settings.cloudRelayEnabled {
+                LabeledContent("Status") {
+                    Text(coordinator.cloudRelayStatus)
+                        .font(.caption2)
+                        .multilineTextAlignment(.trailing)
+                        .textSelection(.enabled)
+                }
+            }
         }
     }
 }
