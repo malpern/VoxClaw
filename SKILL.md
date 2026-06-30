@@ -71,6 +71,26 @@ curl -X POST http://<mac-ip>:4140/read -d 'Hello from your agent!'
 {"status": "reading"}
 ```
 
+### Stop Reading (Ack)
+
+Stop reading the response you previously sent — scoped to a single agent by
+`project_id` + `agent_id`, so other agents keep speaking. Useful when the user
+sends your agent a new prompt and the old spoken response is now stale.
+
+```bash
+curl -X POST http://<mac-ip>:4140/ack \
+  -H 'Content-Type: application/json' \
+  -d '{"project_id": "/path/to/repo", "agent_id": "session-123"}'
+```
+
+| Field        | Type   | Required | Description |
+|--------------|--------|----------|-------------|
+| `project_id` | string | **yes**  | Same identifier you passed to `/read` (a request without it returns 400) |
+| `agent_id`   | string | no       | Same identifier you passed to `/read`; scopes the stop to this one agent. Omit it to stop everything for the project |
+
+The ack stops local playback and is relayed to your LAN peer speakers so it
+stops there too. Response: `{"status":"acknowledged"}`.
+
 ### Agent Notifications
 
 Use agent notifications for task summaries, failures, and optional live progress updates.
@@ -161,7 +181,7 @@ VoxClaw advertises itself via Bonjour as `_voxclaw._tcp` on the local network. A
 | 200    | Text accepted, now reading                 |
 | 200    | Agent notification accepted or suppressed  |
 | 400    | Missing or empty text, or text too long    |
-| 404    | Unknown endpoint (use `POST /read`, `POST /agent-notify`, or `GET /status`) |
+| 404    | Unknown endpoint (use `POST /read`, `POST /agent-notify`, `POST /ack`, or `GET /status`) |
 | 413    | Request body too large (max 1 MB)          |
 
 Error responses are JSON: `{"error": "description"}`.

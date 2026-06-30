@@ -22,7 +22,7 @@
 
 Run VoxClaw on your Mac and hear OpenClaw speak to you. When OpenClaw runs on another computer — a server, a headless box, or a different machine — send text to your Mac over the network and VoxClaw speaks it aloud with high-quality text-to-speech. Apple's built-in voices work out of the box; add your own OpenAI or ElevenLabs API key for neural voices when you want that extra polish. Paste text, pipe from the CLI, or stream from any device on your LAN — and listen.
 
-VoxClaw also includes an iPhone app in this repo (`VoxClawIOS/`) with the same core listener + teleprompter flow for iOS.
+VoxClaw also includes an iPhone app in this repo (`VoxClawIOS/`) with the same core listener + teleprompter flow for iOS. With **iCloud relay** turned on, your Mac can even speak through your iPhone when it's locked, backgrounded, or on a different network — VoxClaw wakes it with a silent CloudKit push and reads the text aloud, with a "Now reading" Live Activity on the lock screen. The iOS app also adds a Control Center control, a home-screen widget, and a "Read Text Aloud" Siri/Shortcuts action.
 
 For Codex plugin installation and marketplace distribution, use the separate [malpern/codex-marketplace](https://github.com/malpern/codex-marketplace) repository. This repository is the main product repo for the app, website assets, releases, and source code.
 
@@ -47,10 +47,12 @@ A macOS menu bar app + CLI tool that reads text aloud using Apple TTS (default),
 - **Three Voice Engines** — Apple (no setup), OpenAI (BYOK), or ElevenLabs (BYOK), with Apple fallback when cloud auth fails
 - **Automatic Updates** — In-app updates via Sparkle (notarized + EdDSA-signed); a "Check for Updates…" menu item too
 - **Multiple Input Methods** — Arguments, stdin pipe, file, clipboard, URL scheme, and LAN HTTP
-- **Network API for Agents** — `POST /read`, `GET /status`, and `GET /claw`, with request validation and structured status payloads
+- **Network API for Agents** — `POST /read`, `POST /agent-notify`, `POST /ack`, `GET /status`, and `GET /claw`, with request validation and structured status payloads
+- **Multi-Agent Aware** — `project_id` + `agent_id` give each concurrent agent its own voice, and scope "stop reading" (`/ack`) so prompting one agent never cuts off another
+- **Cross-Device iCloud Relay** — Speak agent output on your iPhone/iPad even when it's locked, backgrounded, or off your LAN, via a silent CloudKit push that wakes the device (opt-in, same iCloud account on both ends)
 - **Bonjour Discovery** — Advertises `_voxclaw._tcp` on LAN for peer/device discovery
 - **Menu Bar App + CLI** — Lightweight menu bar controls plus full terminal control via `voxclaw`
-- **iPhone Companion App** — iOS app target included in this repo (`VoxClawIOS/`) using the shared core engine/settings stack
+- **iPhone Companion App** — iOS app (`VoxClawIOS/`) on the shared core engine/settings stack, adding a Control Center control, a home-screen widget, a "Read Text Aloud" Siri/Shortcuts action, a "Now reading" Live Activity, and the iCloud relay receiver
 - **macOS Services Integration** — Read selected text from other apps via Services
 - **Keyboard Controls While Reading** — Space (pause/resume), Escape (stop), Arrow keys (skip ±3s)
 
@@ -84,9 +86,23 @@ swift build -c release
 
 ### iPhone App (iOS)
 
-The repo includes an iPhone app target.
+The repo includes an iPhone app target with a widget extension. Open
+`VoxClawIOS/VoxClawIOS.xcodeproj` in Xcode (26+) and run the `VoxClawIOS` scheme
+on iOS 26+. The app ships to internal testers via TestFlight (see
+`.github/workflows/ios-release.yml`, triggered by `ios-v*` tags).
 
-Open `/Users/malpern/local-code/VoxClaw/VoxClawIOS/VoxClawIOS.xcodeproj` in Xcode and run the `VoxClawIOS` scheme on iOS 26+.
+It adds, on top of the shared listener + teleprompter:
+
+- **Control Center control** + **home-screen widget** — "Read Clipboard" with one tap
+- **Siri / Spotlight / Shortcuts** — "Read Text Aloud"
+- **Live Activity** — a "Now reading" card on the lock screen / Dynamic Island
+- **iCloud relay receiver** — enable "Remote Relay" in iOS Settings (and "Relay
+  to my devices over iCloud" on the Mac) so your Mac's agent speech plays here
+  even when the app is closed or the phone is locked. Both devices must be
+  signed into the same iCloud account with the toggle on.
+
+The relay uses the user's **private** CloudKit database
+(`iCloud.com.malpern.voxclaw`); speech text never leaves your iCloud account.
 
 ## Usage
 
@@ -140,6 +156,12 @@ curl -X POST http://your-mac-ip:4140/read \
 curl -X POST http://your-mac-ip:4140/read \
   -H 'Content-Type: application/json' \
   -d '{"text": "Hello", "project_id": "/path/to/repo", "agent_id": "session-123"}'
+
+# Ack: stop reading just this agent's current response (scoped by project_id +
+# agent_id), e.g. when the user sends the agent a new prompt. Other agents keep speaking.
+curl -X POST http://your-mac-ip:4140/ack \
+  -H 'Content-Type: application/json' \
+  -d '{"project_id": "/path/to/repo", "agent_id": "session-123"}'
 
 # Plain text body
 curl -X POST http://your-mac-ip:4140/read -d 'Hello from my phone'
@@ -234,7 +256,7 @@ Input (args/stdin/file/clipboard/url/network)
 ```
 
 **Tech Stack:**
-- Swift 6.2 with strict concurrency
+- Swift 6.4 with strict concurrency
 - SwiftUI + NSPanel for floating overlay
 - AVAudioEngine for low-latency audio playback
 - Apple AVSpeechSynthesizer + OpenAI TTS API (`gpt-4o-mini-tts`) + ElevenLabs TTS API
@@ -242,6 +264,8 @@ Input (args/stdin/file/clipboard/url/network)
 - Swift Argument Parser for CLI
 - NWListener (Network.framework) for LAN text input
 - Bonjour service advertisement (`_voxclaw._tcp`) for discovery
+- CloudKit (private database, silent-push `CKDatabaseSubscription`) for the cross-device iCloud relay
+- WidgetKit + App Intents + ActivityKit on iOS (Control Center control, widget, Siri/Shortcuts, Live Activity)
 - Keychain Services for secure API key storage
 - Sparkle for notarized, EdDSA-signed in-app auto-updates
 

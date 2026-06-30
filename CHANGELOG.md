@@ -3,6 +3,28 @@
 All notable changes to VoxClaw are documented here. Earlier releases are on the
 [GitHub releases page](https://github.com/malpern/VoxClaw/releases).
 
+## Unreleased
+
+### Added
+- **Cross-device iCloud relay** — your Mac can speak agent output on your
+  iPhone/iPad even when it's locked, backgrounded, or off your LAN. The Mac
+  writes the request to your **private** CloudKit database
+  (`iCloud.com.malpern.voxclaw`), which silent-pushes and wakes the device to
+  read it aloud. Opt-in on both ends ("Relay to my devices over iCloud" on the
+  Mac, "Remote Relay" on iOS); both must be on the same iCloud account.
+- **iOS app additions** — a Control Center control and home-screen widget
+  ("Read Clipboard"), a "Read Text Aloud" Siri/Spotlight/Shortcuts action, and
+  a "Now reading" Live Activity (lock screen + Dynamic Island). The app ships to
+  internal testers via TestFlight.
+
+### Fixed
+- **Relay voice fidelity** — relayed speech now reproduces the sender's engine,
+  voice, **rate, and prosody** instead of falling back to the receiving device's
+  defaults.
+- **Relay dedup** — the receiver advances its watermark to the newest record it
+  actually fetched (sender clock) rather than its own wall clock, so messages
+  are no longer skipped or duplicated under clock skew.
+
 ## v1.4.1
 
 ### Added
