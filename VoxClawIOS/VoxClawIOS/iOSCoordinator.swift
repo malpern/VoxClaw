@@ -40,7 +40,12 @@ final class iOSCoordinator: SpeechQueueDelegate {
                         // A relayed request carries the sender's resolved voice/engine —
                         // honor them so the agent sounds the same here as on the source.
                         let engineOverride: (any SpeechEngine)? = request.relayed
-                            ? settings.makeRelayEngine(engine: request.engine ?? settings.voiceEngine, voice: request.voice)
+                            ? settings.makeRelayEngine(
+                                engine: request.engine ?? settings.voiceEngine,
+                                voice: request.voice,
+                                rate: request.rate,
+                                instructions: request.instructions
+                            )
                             : nil
                         self.queue.enqueue(
                             request.text,
@@ -127,7 +132,9 @@ final class iOSCoordinator: SpeechQueueDelegate {
                 // so the agent sounds identical across devices.
                 let engine = settings.makeRelayEngine(
                     engine: payload.engine ?? settings.voiceEngine,
-                    voice: payload.voice
+                    voice: payload.voice,
+                    rate: payload.rate,
+                    instructions: payload.instructions
                 )
                 queue.enqueue(
                     payload.text,
@@ -140,7 +147,13 @@ final class iOSCoordinator: SpeechQueueDelegate {
                 )
                 postLockScreenText(payload.text)
             }
-            UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
+            // Advance the watermark to the newest record we actually fetched (the
+            // sender's clock), not this device's wall clock — using Date.now risks
+            // skipping records written between the fetch and now, and is sensitive
+            // to cross-device clock skew. Records carry their own sentAt.
+            if let newest = pending.compactMap(\.sentAt).max() {
+                UserDefaults.standard.set(newest.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
+            }
         } catch {
             print("CloudKit fetch failed: \(error)")
         }

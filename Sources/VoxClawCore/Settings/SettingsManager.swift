@@ -658,20 +658,28 @@ public final class SettingsManager {
     /// to reproduce the sender's per-agent voice verbatim (the sender owns the
     /// agent→voice mapping; receivers must not re-derive it). Falls back to Apple
     /// when the requested engine isn't configured on this device.
-    public func makeRelayEngine(engine: VoiceEngineType, voice: String?) -> any SpeechEngine {
-        let instructions = readingStyle.isEmpty ? nil : readingStyle
+    public func makeRelayEngine(
+        engine: VoiceEngineType,
+        voice: String?,
+        rate: Float? = nil,
+        instructions: String? = nil
+    ) -> any SpeechEngine {
+        // Honor the sender's rate/prosody so the agent sounds identical across
+        // devices; fall back to this device's settings when the request omits them.
+        let effectiveRate = rate ?? voiceSpeed
+        let effectiveInstructions = instructions ?? (readingStyle.isEmpty ? nil : readingStyle)
         let apple = AppleSpeechEngine(
             voiceIdentifier: (engine == .apple ? voice : nil) ?? appleVoiceIdentifier,
-            rate: voiceSpeed
+            rate: effectiveRate
         )
         switch engine {
         case .apple:
             return apple
         case .openai where isOpenAIConfigured:
-            let primary = OpenAISpeechEngine(apiKey: openAIAPIKey, voice: voice ?? openAIVoice, speed: voiceSpeed, instructions: instructions)
+            let primary = OpenAISpeechEngine(apiKey: openAIAPIKey, voice: voice ?? openAIVoice, speed: effectiveRate, instructions: effectiveInstructions)
             return FallbackSpeechEngine(primary: primary, fallback: apple)
         case .elevenlabs where isElevenLabsConfigured:
-            let primary = ElevenLabsSpeechEngine(apiKey: elevenLabsAPIKey, voiceID: voice ?? elevenLabsVoiceID, speed: voiceSpeed, turbo: elevenLabsTurbo)
+            let primary = ElevenLabsSpeechEngine(apiKey: elevenLabsAPIKey, voiceID: voice ?? elevenLabsVoiceID, speed: effectiveRate, turbo: elevenLabsTurbo)
             return FallbackSpeechEngine(primary: primary, fallback: apple)
         default:
             return apple

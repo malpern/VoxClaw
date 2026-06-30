@@ -34,6 +34,10 @@ public actor CloudSpeechRelay {
     private let zoneID: CKRecordZone.ID
     private let log = Logger(subsystem: "com.malpern.voxclaw", category: "CloudSpeechRelay")
 
+    /// Set once the custom zone has been created this session, so steady-state
+    /// `send()`/`ensureSubscription()` calls skip the redundant zone-save round-trip.
+    private var zoneEnsured = false
+
     public init(containerID: String = CloudSpeechRelay.defaultContainerID) {
         self.container = CKContainer(identifier: containerID)
         self.database = container.privateCloudDatabase
@@ -44,7 +48,9 @@ public actor CloudSpeechRelay {
     /// zone is a no-op). Database subscriptions only fire for custom zones, so
     /// both the sender and the receiver must ensure it exists.
     private func ensureZone() async throws {
+        if zoneEnsured { return }
         _ = try await database.save(CKRecordZone(zoneID: zoneID))
+        zoneEnsured = true
     }
 
     /// Human-readable iCloud account status for diagnostics ("available",
@@ -78,6 +84,10 @@ public actor CloudSpeechRelay {
         public var projectId: String?
         public var agentId: String?
         public var engine: VoiceEngineType?
+        /// The sender's timestamp for the record. Set on fetch so the receiver can
+        /// advance its dedup watermark to the newest record it actually saw,
+        /// rather than its own wall clock (which drifts vs the sender).
+        public var sentAt: Date?
 
         public init(
             text: String,
@@ -86,7 +96,8 @@ public actor CloudSpeechRelay {
             instructions: String? = nil,
             projectId: String? = nil,
             agentId: String? = nil,
-            engine: VoiceEngineType? = nil
+            engine: VoiceEngineType? = nil,
+            sentAt: Date? = nil
         ) {
             self.text = text
             self.voice = voice
@@ -95,6 +106,7 @@ public actor CloudSpeechRelay {
             self.projectId = projectId
             self.agentId = agentId
             self.engine = engine
+            self.sentAt = sentAt
         }
     }
 
@@ -159,7 +171,8 @@ public actor CloudSpeechRelay {
                     instructions: record["instructions"] as? String,
                     projectId: record["projectId"] as? String,
                     agentId: record["agentId"] as? String,
-                    engine: (record["engine"] as? String).flatMap(VoiceEngineType.init(rawValue:))
+                    engine: (record["engine"] as? String).flatMap(VoiceEngineType.init(rawValue:)),
+                    sentAt: record["sentAt"] as? Date
                 )
             )
         }
