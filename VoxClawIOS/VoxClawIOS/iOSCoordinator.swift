@@ -1,6 +1,7 @@
 import AVFoundation
 import SwiftUI
 import UIKit
+import UserNotifications
 import VoxClawCore
 
 @Observable
@@ -91,6 +92,9 @@ final class iOSCoordinator: SpeechQueueDelegate {
         if UserDefaults.standard.object(forKey: Self.lastCloudFetchKey) == nil {
             UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
         }
+        // Permission to show the spoken text on the lock screen (a Live Activity
+        // can't be started from a background wake; a local notification can).
+        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert])
         let account = await cloudRelay.accountStatusDescription()
         cloudRelayStatus = "iCloud: \(account) · subscribing…"
         do {
@@ -134,11 +138,25 @@ final class iOSCoordinator: SpeechQueueDelegate {
                     agentId: payload.agentId,
                     requestedEngine: payload.engine
                 )
+                postLockScreenText(payload.text)
             }
             UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: Self.lastCloudFetchKey)
         } catch {
             print("CloudKit fetch failed: \(error)")
         }
+    }
+
+    /// Shows the spoken text on the lock screen via a local notification. Posted
+    /// from the background wake (where a Live Activity can't be started). When the
+    /// app is foreground, iOS suppresses the banner by default, so it isn't noisy.
+    private func postLockScreenText(_ text: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "VoxClaw"
+        content.body = text
+        content.sound = nil
+        content.interruptionLevel = .active
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Live Activity
