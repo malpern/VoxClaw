@@ -5,6 +5,8 @@ All notable changes to VoxClaw are documented here. Earlier releases are on the
 
 ## Unreleased
 
+## v1.4.2
+
 ### Added
 - **Cross-device iCloud relay** — your Mac can speak agent output on your
   iPhone/iPad even when it's locked, backgrounded, or off your LAN. The Mac
@@ -16,14 +18,36 @@ All notable changes to VoxClaw are documented here. Earlier releases are on the
   ("Read Clipboard"), a "Read Text Aloud" Siri/Spotlight/Shortcuts action, and
   a "Now reading" Live Activity (lock screen + Dynamic Island). The app ships to
   internal testers via TestFlight.
+- **Spotify ducking in the browser extension** — the extension now fades playing
+  `open.spotify.com` tabs to 20% while VoxClaw speaks and restores each tab's
+  original volume afterward, instead of letting speech compete with the music.
+  YouTube tabs still pause as before.
 
 ### Fixed
+- **Network listener stopped accepting connections after sustained use** — every
+  served request leaked a file descriptor, because the response path cancelled
+  the connection through a `weak self` that was already released. Against the
+  256-descriptor soft limit, a client polling `/status` once a second exhausted
+  it in well under an hour: the app kept running and looked healthy while the
+  listener silently refused every connection.
+- **Browser extension stopped polling for good after VoxClaw restarted** — the
+  poll loop lives in a service worker that is torn down when idle, and the
+  "VoxClaw unreachable" path made no extension API calls, so the worker died
+  mid-outage and never came back. It now stays alive through an outage, with a
+  30s alarm as a backstop.
 - **Relay voice fidelity** — relayed speech now reproduces the sender's engine,
   voice, **rate, and prosody** instead of falling back to the receiving device's
   defaults.
 - **Relay dedup** — the receiver advances its watermark to the newest record it
   actually fetched (sender clock) rather than its own wall clock, so messages
   are no longer skipped or duplicated under clock skew.
+
+### Changed
+- Docs and the bundled agent commands no longer reference the `/agent-notify`
+  endpoint or `voxclaw-say --kind`, both removed when the agent-speech subsystem
+  was deleted. `SKILL.md` (served to agents as `skill_doc`) now describes the
+  `/read`-only API the app actually implements, and the three `/voxclaw-*` slash
+  commands work again instead of exiting with a usage error.
 
 ## v1.4.1
 
