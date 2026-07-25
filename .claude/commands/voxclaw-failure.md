@@ -11,5 +11,5 @@ Condense the failure into one short sentence. Lead with fail or blocked status. 
 Run this command:
 
 ```bash
-printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say --kind failure
+printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say
 ```

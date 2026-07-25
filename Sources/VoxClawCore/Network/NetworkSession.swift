@@ -105,7 +105,7 @@ final class NetworkSession: Sendable {
                 "binding_count": info.voiceBindingCount,
                 "protocol": "Pass project_id (recommend cwd) and optional agent_id in POST /read to get a stable auto-assigned voice per engine. Explicit voice field still wins."
             ] as [String: Any],
-            "agent_handoff": "🦞 Call health_url first, then POST to speak_url or agent_notify_url. Use these URLs exactly (no hostname/discovery rewrite unless a human explicitly asks). Website: https://voxclaw.com/ Skill: https://github.com/malpern/VoxClaw/blob/main/SKILL.md"
+            "agent_handoff": "🦞 Call health_url first, then POST to speak_url. Use these URLs exactly (no hostname/discovery rewrite unless a human explicitly asks). Website: https://voxclaw.com/ Skill: https://github.com/malpern/VoxClaw/blob/main/SKILL.md"
         ]
 
         guard let data = try? JSONSerialization.data(withJSONObject: payload, options: []),

@@ -67,7 +67,7 @@ voxclaw --status                     # Check if listener is running
 
 ## Agent Speech Convention
 
-When finishing a non-trivial task in this repo, write a 1 to 2 sentence spoken summary and send it through `plugins/voxclaw/scripts/voxclaw-say --kind summary`. Lead with the outcome, then verification status, then any blocker. Keep it in plain spoken prose: no code, file paths, or command names unless they matter to the human. Skip it for pure Q&A or read-only exploration. Do not use `--kind progress` unless the human explicitly opted into hearing live progress while work is ongoing.
+When finishing a non-trivial task in this repo, write a 1 to 2 sentence spoken summary and send it through `plugins/voxclaw/scripts/voxclaw-say`. Lead with the outcome, then verification status, then any blocker. Keep it in plain spoken prose: no code, file paths, or command names unless they matter to the human. Skip it for pure Q&A or read-only exploration. Do not narrate live progress mid-task unless the human explicitly opted into hearing it.
 
 ## Key Conventions
 

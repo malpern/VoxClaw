@@ -11,5 +11,5 @@ Use this only when the human explicitly opted into hearing progress while work i
 Run this command:
 
 ```bash
-printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say --kind progress
+printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say
 ```

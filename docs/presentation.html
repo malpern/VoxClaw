@@ -705,7 +705,7 @@
 
   <ul>
     <li><code>POST /read</code> &mdash; Speak text immediately or queue it. Accepts <code>text</code>, <code>voice</code>, <code>rate</code>, and <code>instructions</code> for speaking style.</li>
-    <li><code>POST /agent-notify</code> &mdash; Structured notifications with <code>kind</code> (summary, progress, failure) for different treatment.</li>
+    <li><code>POST /ack</code> &mdash; Stop reading an agent's previous message, scoped by <code>project_id</code> and <code>agent_id</code> so one agent's interrupt doesn't silence another's.</li>
     <li><code>GET /status</code> &mdash; Health check that returns the current state: idle, loading, playing, paused, finished. Useful for agents that want to wait their turn.</li>
   </ul>
 

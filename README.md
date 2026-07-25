@@ -47,7 +47,7 @@ A macOS menu bar app + CLI tool that reads text aloud using Apple TTS (default),
 - **Three Voice Engines** — Apple (no setup), OpenAI (BYOK), or ElevenLabs (BYOK), with Apple fallback when cloud auth fails
 - **Automatic Updates** — In-app updates via Sparkle (notarized + EdDSA-signed); a "Check for Updates…" menu item too
 - **Multiple Input Methods** — Arguments, stdin pipe, file, clipboard, URL scheme, and LAN HTTP
-- **Network API for Agents** — `POST /read`, `POST /agent-notify`, `POST /ack`, `GET /status`, and `GET /claw`, with request validation and structured status payloads
+- **Network API for Agents** — `POST /read`, `POST /ack`, `POST /control`, `GET /status`, and `GET /claw`, with request validation and structured status payloads
 - **Multi-Agent Aware** — `project_id` + `agent_id` give each concurrent agent its own voice, and scope "stop reading" (`/ack`) so prompting one agent never cuts off another
 - **Cross-Device iCloud Relay** — Speak agent output on your iPhone/iPad even when it's locked, backgrounded, or off your LAN, via a silent CloudKit push that wakes the device (opt-in, same iCloud account on both ends)
 - **Bonjour Discovery** — Advertises `_voxclaw._tcp` on LAN for peer/device discovery

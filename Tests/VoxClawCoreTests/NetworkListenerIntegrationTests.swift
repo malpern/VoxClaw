@@ -36,6 +36,8 @@ struct NetworkListenerIntegrationTests {
         #expect(body.contains("\"auto_closed_instances_on_launch\""))
         // Agent guidance should not auto-route to .local hostnames
         #expect(!body.contains(".local"))
+        // /agent-notify was removed; agents must not be pointed at a dead endpoint
+        #expect(!body.contains("agent_notify"))
     }
 
     @Test func readEndpointAcceptsJSON() async throws {

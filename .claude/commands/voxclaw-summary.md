@@ -11,5 +11,5 @@ Write a 1 to 3 sentence spoken summary that leads with the outcome, then verific
 Run this command:
 
 ```bash
-printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say --kind summary
+printf '%s\n' "$ARGUMENTS" | plugins/voxclaw/scripts/voxclaw-say
 ```

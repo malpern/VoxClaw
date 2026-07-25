@@ -19,20 +19,20 @@ plugins/voxclaw/scripts/voxclaw-say "Task complete. Tests passed."
 Speak the default final agent summary:
 
 ```bash
-plugins/voxclaw/scripts/voxclaw-say --kind summary "Task complete. Tests passed."
+plugins/voxclaw/scripts/voxclaw-say "Task complete. Tests passed."
 ```
 
 Speak a failure summary:
 
 ```bash
-plugins/voxclaw/scripts/voxclaw-say --kind failure "Build failed in the network listener."
+plugins/voxclaw/scripts/voxclaw-say "Build failed in the network listener."
 ```
 
 Pipe a generated summary:
 
 ```bash
 printf '%s\n' "Build failed. The parser tests are failing after the networking changes." | \
-  plugins/voxclaw/scripts/voxclaw-say --kind failure
+  plugins/voxclaw/scripts/voxclaw-say
 ```
 
 Use a remote VoxClaw listener:
@@ -48,7 +48,7 @@ plugins/voxclaw/scripts/voxclaw-say \
 Use explicit live progress narration only when the user opted in:
 
 ```bash
-plugins/voxclaw/scripts/voxclaw-say --kind progress "Halfway through the migration."
+plugins/voxclaw/scripts/voxclaw-say "Halfway through the migration."
 ```
 
 ## Agent patterns
@@ -56,13 +56,13 @@ plugins/voxclaw/scripts/voxclaw-say --kind progress "Halfway through the migrati
 Use `voxclaw-read-task-summary` when finishing work:
 
 ```text
-Summarize the completed work in 1 to 3 spoken sentences, then send it through plugins/voxclaw/scripts/voxclaw-say --kind summary.
+Summarize the completed work in 1 to 3 spoken sentences, then send it through plugins/voxclaw/scripts/voxclaw-say.
 ```
 
 Use `voxclaw-read-test-failures` when verification fails:
 
 ```text
-Condense the failing tests into one short spoken sentence and send it through plugins/voxclaw/scripts/voxclaw-say --kind failure.
+Condense the failing tests into one short spoken sentence and send it through plugins/voxclaw/scripts/voxclaw-say.
 ```
 
 For Claude Code, the same helper can be called from project commands in `.claude/commands/`.

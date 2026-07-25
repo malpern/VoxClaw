@@ -24,18 +24,16 @@ If the human shares a `🦞 VoxClaw setup pointer`, use it directly. It includes
 - integration doc (`SKILL.md`)
 - machine-specific `Speak URL` (`/read`)
 - machine-specific `Health URL` (`/status`)
-- machine-specific `Agent Notify URL` (`/agent-notify`)
 
 Prefer those provided URLs over guessed hostnames when both are available.
 Never auto-switch to `.local` hostnames. Use numeric LAN IP URLs unless a human explicitly provides a `.local` target.
-If `health_url`, `speak_url`, or `agent_notify_url` are present in the pointer, do not ask for LAN IP or run discovery first; call `health_url` immediately, then use the provided URLs.
+If `health_url` or `speak_url` are present in the pointer, do not ask for LAN IP or run discovery first; call `health_url` immediately, then use the provided URLs.
 
 Reliable connect order:
 1. Confirm on VoxClaw Mac: `curl -sS http://localhost:4140/status`
 2. Confirm from agent host: `curl -sS http://<lan-ip>:4140/status`
-3. Send direct speech to `<lan-ip>:4140/read`
-4. Send final summaries, failures, and opt-in progress updates to `<lan-ip>:4140/agent-notify`
-5. If step 1 passes but step 2 fails, treat as network/firewall issue (not app API issue).
+3. Send all speech — including final summaries and failures — to `<lan-ip>:4140/read`
+4. If step 1 passes but step 2 fails, treat as network/firewall issue (not app API issue).
 
 ## API
 
@@ -91,39 +89,6 @@ curl -X POST http://<mac-ip>:4140/ack \
 The ack stops local playback and is relayed to your LAN peer speakers so it
 stops there too. Response: `{"status":"acknowledged"}`.
 
-### Agent Notifications
-
-Use agent notifications for task summaries, failures, and optional live progress updates.
-
-```bash
-curl -X POST http://<mac-ip>:4140/agent-notify \
-  -H 'Content-Type: application/json' \
-  -d '{"kind":"summary","text":"Task complete. I updated the parser and the focused tests passed."}'
-```
-
-**Parameters (JSON body):**
-
-| Field          | Type   | Required | Description |
-|----------------|--------|----------|-------------|
-| `kind`         | string | yes      | `summary`, `progress`, or `failure` |
-| `text`         | string | yes      | Spoken text |
-| `source`       | string | no       | Agent/source label |
-| `voice`        | string | no       | OpenAI voice override |
-| `rate`         | number | no       | Speech rate multiplier |
-| `instructions` | string | no       | Natural-language speaking style |
-
-Expected response:
-
-```json
-{"status":"reading"}
-```
-
-or
-
-```json
-{"status":"suppressed"}
-```
-
 ### Check Status
 
 ```bash
@@ -143,20 +108,11 @@ curl http://<mac-ip>:4140/status
   "skill_doc": "https://github.com/malpern/VoxClaw/blob/main/SKILL.md",
   "discovery": "_voxclaw._tcp",
   "speak_url": "http://192.168.1.50:4140/read",
-  "health_url": "http://192.168.1.50:4140/status",
-  "agent_notify_url": "http://192.168.1.50:4140/agent-notify",
-  "agent_speech_mode": "summary",
-  "agent_speech_verbosity": "brief"
+  "health_url": "http://192.168.1.50:4140/status"
 }
 ```
 
 States: `idle`, `loading`, `playing`, `paused`, `finished`.
-
-`agent_speech_mode` controls what the app will actually speak:
-
-- `off`: speak nothing
-- `summary`: speak final summaries and failures
-- `live`: speak summaries, failures, and progress updates
 
 ## Setup
 
@@ -179,9 +135,8 @@ VoxClaw advertises itself via Bonjour as `_voxclaw._tcp` on the local network. A
 | Status | Meaning                                    |
 |--------|--------------------------------------------|
 | 200    | Text accepted, now reading                 |
-| 200    | Agent notification accepted or suppressed  |
 | 400    | Missing or empty text, or text too long    |
-| 404    | Unknown endpoint (use `POST /read`, `POST /agent-notify`, `POST /ack`, or `GET /status`) |
+| 404    | Unknown endpoint (use `POST /read`, `POST /ack`, `POST /control`, or `GET /status`) |
 | 413    | Request body too large (max 1 MB)          |
 
 Error responses are JSON: `{"error": "description"}`.
@@ -193,17 +148,17 @@ Error responses are JSON: `{"error": "description"}`.
 **Speak a summary after a task completes:**
 
 ```bash
-curl -X POST http://192.168.1.50:4140/agent-notify \
+curl -X POST http://192.168.1.50:4140/read \
   -H 'Content-Type: application/json' \
-  -d '{"kind":"summary","text":"Task complete. I deployed the new version and all tests passed."}'
+  -d '{"text":"Task complete. I deployed the new version and all tests passed."}'
 ```
 
 **Use a specific voice at faster speed:**
 
 ```bash
-curl -X POST http://192.168.1.50:4140/agent-notify \
+curl -X POST http://192.168.1.50:4140/read \
   -H 'Content-Type: application/json' \
-  -d '{"kind":"failure","text":"Heads up, the build failed on CI.","voice":"nova","rate":1.3}'
+  -d '{"text":"Heads up, the build failed on CI.","voice":"nova","rate":1.3}'
 ```
 
 **Control speaking style with instructions:**
@@ -218,7 +173,7 @@ curl -X POST http://192.168.1.50:4140/read \
 
 ```bash
 curl -s http://192.168.1.50:4140/status | grep -q '"status":"ok"' && \
-  curl -X POST http://192.168.1.50:4140/agent-notify \
+  curl -X POST http://192.168.1.50:4140/read \
     -H 'Content-Type: application/json' \
-    -d '{"kind":"summary","text":"Ready to go."}'
+    -d '{"text":"Ready to go."}'
 ```

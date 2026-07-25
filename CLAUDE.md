@@ -73,7 +73,7 @@ voxclaw --status                     # Check if listener is running
 
 ## Agent Speech Convention
 
-When finishing a non-trivial task in this repo, pipe a 1–2 sentence spoken summary through `plugins/voxclaw/scripts/voxclaw-say --kind summary`. Lead with the outcome, then verification status, then any blocker. Use prose only — no code, file paths, or command names. Skip for pure Q&A or read-only exploration. The app's `agentSpeechMode` setting filters whether it actually speaks, so always emit; let the app decide.
+When finishing a non-trivial task in this repo, pipe a 1–2 sentence spoken summary through `plugins/voxclaw/scripts/voxclaw-say`. Lead with the outcome, then verification status, then any blocker. Use prose only — no code, file paths, or command names. Skip for pure Q&A or read-only exploration. If neither the listener nor the `voxclaw` CLI is reachable the script exits non-zero without speaking; that failure is harmless and can be ignored.
 
 ## Key Conventions
 
