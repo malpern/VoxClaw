@@ -331,13 +331,17 @@ final class NetworkSession: Sendable {
             headers += "\r\n"
             var responseData = headers.data(using: .utf8) ?? Data()
             responseData.append(bodyData)
-            connection.send(content: responseData, completion: .contentProcessed { [weak self] _ in
-                self?.connection.cancel()
+            // Capture the connection, not self: nothing retains the session past
+            // the receive handler, so a `weak self` here is usually already nil by
+            // the time the send completes and the socket is never closed (leaking
+            // one fd per request until the listener stops accepting entirely).
+            connection.send(content: responseData, completion: .contentProcessed { [connection] _ in
+                connection.cancel()
             })
         } else {
             headers += "\r\n"
-            connection.send(content: headers.data(using: .utf8), completion: .contentProcessed { [weak self] _ in
-                self?.connection.cancel()
+            connection.send(content: headers.data(using: .utf8), completion: .contentProcessed { [connection] _ in
+                connection.cancel()
             })
         }
     }

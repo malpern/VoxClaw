@@ -38,6 +38,51 @@ struct NetworkListenerIntegrationTests {
         #expect(!body.contains(".local"))
     }
 
+    /// Each served request must close its socket. The session that owns the
+    /// connection is not retained past its receive handler, so a response path
+    /// that cancels via `weak self` silently leaks one descriptor per request
+    /// and the listener eventually stops accepting entirely.
+    @Test func servedRequestsDoNotLeakDescriptors() async throws {
+        let appState = AppState()
+        let settings = SettingsManager()
+        let listener = NetworkListener(port: Self.testPort, serviceName: nil, appState: appState, settings: settings)
+
+        try listener.start(onReadRequest: { _ in })
+        defer { listener.stop() }
+
+        try await waitForListener(port: Self.testPort)
+
+        let url = URL(string: "http://localhost:\(Self.testPort)/status")!
+        // Don't let URLSession pool connections; we want each request's server-side
+        // socket to be the only thing that could accumulate.
+        let config = URLSessionConfiguration.ephemeral
+        config.httpShouldUsePipelining = false
+        let session = URLSession(configuration: config)
+        defer { session.invalidateAndCancel() }
+
+        // Warm up so one-time allocations aren't counted as growth.
+        for _ in 0..<10 { _ = try await session.data(from: url) }
+        let before = Self.openDescriptorCount()
+
+        let requestCount = 200
+        for _ in 0..<requestCount { _ = try await session.data(from: url) }
+        try await Task.sleep(for: .milliseconds(500))
+
+        let growth = Self.openDescriptorCount() - before
+        // Leaking would grow roughly 1:1 with requests. Allow generous headroom
+        // for client-side sockets still winding down.
+        #expect(growth < requestCount / 4, "descriptor count grew by \(growth) over \(requestCount) requests")
+
+        // And the listener must still be answering after the burst.
+        let (_, response) = try await session.data(from: url)
+        #expect((response as? HTTPURLResponse)?.statusCode == 200)
+    }
+
+    /// Open file descriptors for the current process.
+    private static func openDescriptorCount() -> Int {
+        (try? FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count) ?? 0
+    }
+
     @Test func readEndpointAcceptsJSON() async throws {
         let appState = AppState()
         let settings = SettingsManager()
