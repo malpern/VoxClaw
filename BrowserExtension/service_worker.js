@@ -57,6 +57,13 @@ async function pollStatus() {
 
     wasReading = isReading;
   } catch {
+    // This chrome.* call is load-bearing beyond the title it sets: extension API
+    // activity is what resets the service worker's idle timer. The success path
+    // above calls chrome.action every second, but without a call here the worker
+    // goes idle while VoxClaw is unreachable and is torn down — taking the poll
+    // interval with it, so ducking never resumes once VoxClaw comes back.
+    chrome.action.setTitle({ title: "VoxClaw (not running)" });
+
     if (wasReading) {
       wasReading = false;
       if (pausedTabs.length > 0) {
@@ -223,6 +230,23 @@ function stopPolling() {
   }
   log("Polling stopped");
 }
+
+// A service worker is torn down after ~30s without extension API activity.
+// While VoxClaw is unreachable pollStatus takes its catch path, which makes no
+// chrome.* calls, so the worker dies — and setInterval dies with it. Nothing
+// would restart it, because startPolling only runs on install/startup, so a
+// single VoxClaw restart used to disable the extension until the browser was
+// restarted. This alarm wakes the worker back up and restarts the loop.
+const WATCHDOG_ALARM = "voxclaw-poll-watchdog";
+// 30s is the shortest period Chrome honors for alarms.
+chrome.alarms.create(WATCHDOG_ALARM, { periodInMinutes: 0.5 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== WATCHDOG_ALARM) return;
+  chrome.storage.local.get("enabled", ({ enabled }) => {
+    if (enabled !== false) startPolling();
+  });
+});
 
 chrome.storage.local.get("enabled", ({ enabled }) => {
   if (enabled !== false) startPolling();
